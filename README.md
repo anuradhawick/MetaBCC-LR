@@ -1,5 +1,5 @@
 # MetaBCC-LR
-**MetaBCC-LR**: MetaBCC-LR: Reference-free Binning of Long Reads using k-mer Coverage Histograms and Oligonucleotide Composition in Metagenomics Analysis
+**MetaBCC-LR**: Metagenomics Binning by Coverage and Composition for Long Reads
 
 ## Dependencies
 MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you will need to install the following python and C++ modules.
@@ -40,6 +40,6 @@ cd MetaBCC-LR
 TBD
 ```
 * Reads path should contain FASTQ reads in the standard FASTQ format.
-* Output path is the foldername that you wish the results to be in.
+* Output path is the folder name that you wish the results to be saved in.
 * Specify the number of threads.
 * Max memory for the DSK to run.
