@@ -37,9 +37,23 @@ In order to run MetaBCC-LR you are required to provide the reads in FASTQ format
 
 ```
 cd MetaBCC-LR
-TBD
+./MetaBCC-LR -h
+
+usage: MetaBCC-LR [-h] -r <READS PATH> [-t THREADS] [-i IDS] -o DEST
+
+MetaBCC-LR Help. A tool developed for binning of metagenomics long reads
+(PacBio/ONT). Tool utilizes composition and coverage profiles of reads based
+on k-mer frequencies to perform dimension reduction. dimension reduced reads
+are then clustered using DB-SCAN. Minimum RAM requirement is 9GB.
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -r <READS PATH>  Reads path (FASTQ)
+  -t THREADS       Thread limit
+  -i IDS           Read ids of reads (For dry runs with ground truth)
+  -o DEST          Output directory
 ```
 * Reads path should contain FASTQ reads in the standard FASTQ format.
 * Output path is the foldername that you wish the results to be in.
-* Specify the number of threads.
-* Max memory for the DSK to run.
+* Specify the number of threads
+* The program requires a minimum of 9GB to run. This is because we have optimized the coverage histogram generation process to accommodate all 15mers in RAM for faster lookup of counts.

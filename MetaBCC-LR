@@ -34,7 +34,7 @@ threads = args.t
 ids = args.i
 
 if threads <= 0:
-    print("Minimum number of threads is 1. Using thread count 1 and continue").
+    print("Minimum number of threads is 1. Using thread count 1 and continue")
     threads = 1
 
 if not os.path.isfile(readsPath):
