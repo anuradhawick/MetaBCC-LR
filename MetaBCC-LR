@@ -1,0 +1,114 @@
+#!/usr/bin/python3
+import argparse
+import os
+import sys
+
+parser = argparse.ArgumentParser(description="""MetaBCC-LR Help. A tool developed for binning of metagenomics long reads (PacBio/ONT). \
+        Tool utilizes composition and coverage profiles of reads based on k-mer frequencies to perform dimension reduction. \
+        dimension reduced reads are then clustered using DB-SCAN. Minimum RAM requirement is 9GB.""")
+
+parser.add_argument('-r',
+                    metavar='<READS PATH>',
+                    help="Reads path (FASTQ)",
+                    type=str,
+                    required=True)
+parser.add_argument('-t',
+                    metavar='THREADS',
+                    help="Thread limit",
+                    type=int,
+                    default=1,
+                    required=False)
+parser.add_argument('-i',
+                    metavar='IDS',
+                    help="Read ids of reads (For dry runs with ground truth)",
+                    type=str,
+                    required=False,
+                    default=None)
+parser.add_argument('-o', metavar='DEST', help="Output directory", type=str, required=True)
+
+args = parser.parse_args()
+
+readsPath = args.r
+output = args.o
+threads = args.t
+ids = args.i
+
+if threads <= 0:
+    print("Minimum number of threads is 1. Using thread count 1 and continue").
+    threads = 1
+
+if not os.path.isfile(readsPath):
+    print("Failed to open reads file")
+    print("Exitting process. Good Bye!")
+    sys.exit(1)
+
+if not os.path.isfile(ids):
+    print("Failed to open read ids. Continue without ids")
+    ids = None
+
+if not os.path.exists(output):
+    os.makedirs(output)
+
+def checkProc(ret, n=None):
+    if ret != 0:
+        if n: print("Error in step:", n)
+        print("Failed due to an error. Please check the log. Good Bye!")
+        sys.exit(ret)
+
+
+print("Filtering reads")
+cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fq" """.format(os.path.realpath(__file__), readsPath, output)
+o = os.system(cmdFilter)
+checkProc(o, "Filtering reads")
+
+print("Running DSK")
+cmdDSK = """dsk -file "{0}/filteredReads.fq" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
+o = os.system(cmdDSK)
+checkProc(o, "Running DSK")
+
+print("Reading DSK output")
+cmdDSKRead = """python {0}/src/scan-dsk.py {1}/DSK/filteredReads.h5 {1}/DSK/ {2}""".format(os.path.realpath(__file__), output, threads)
+o = os.system(cmdDSKRead)
+checkProc(o, "Reading DSK output")
+
+print("Gathering DSK data")
+cmdGather = """cat "{0}/DSK/*.chunk" > "{0}/DSK/15mersCounts" """.format(output)
+o = os.system(cmdGather)
+checkProc(o, "Gathering DSK data")
+
+print("Counting Trimers")
+cmd = """mkdir -p "{0}/profiles" """.format(output)
+o = os.system(cmd)
+checkProc(o, "Making directory for profiles")
+
+cmd = """"{0}/bin/countTrimers" "{1}/filteredReads.fq "{1}/profiles/3mers" {2}""".format(os.path.realpath(__file__), output, threads)
+o = os.system(cmd)
+checkProc(o, "Counting Trimers")
+
+print("Counting 15-mer profiles")
+cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fq" "{1}/profiles/15mers" {2}""".format(os.path.realpath(__file__), output, threads)
+o = os.system(cmd)
+checkProc(o, "Counting 15-mer profiles")
+
+print("Sampling Reads")
+if ids:
+    cmd = """python {0}/src/sampledata.py -p3 {0}/profiles/3mers -p15 {0}/profiles/15mers -c 10000 -ids "{2}" """.format(os.path.realpath(__file__), output, ids)
+else:
+    cmd = """python {0}/src/sampledata.py -p3 {0}/profiles/3mers -p15 {0}/profiles/15mers -c 10000""".format(os.path.realpath(__file__), output)
+o = os.system(cmd)
+checkProc(o, "Sampling Reads")
+
+print("Binning sampled reads")
+if ids:
+    cmd = """python "{0}/src/Binner.py" -p3 "{1}/profiles/3mers_sampled" -p15 "{1}/profiles/15mers_sampled" -o "{1}/Binning" -ids "{2}" """.format(os.path.realpath(__file__), output, ids)
+else:
+    cmd = """python "{0}/src/Binner.py" -p3 "{1}/profiles/3mers_sampled" -p15 "{1}/profiles/15mers_sampled" -o "{1}/Binning" """.format(os.path.realpath(__file__), output)
+o = os.system(cmd)
+checkProc(o, "Binning sampled reads")
+
+print("Assigning reads")
+cmd = """{0}/bin/assign {1}/profiles/3mers {1}/profiles/15mers {1}/Binning/cluster-stats.txt {2} {1}/Binning/final.txt """.format(os.path.realpath(__file__), output, threads)
+o = os.system(cmd)
+checkProc(o, "Assigning reads")
+
+print("Final Result = '{0}/Binning/final.txt'".format(output))
