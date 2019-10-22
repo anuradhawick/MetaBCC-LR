@@ -1,5 +1,5 @@
 # MetaBCC-LR
-**MetaBCC-LR**: MetaBCC-LR: Reference-free Binning of Long Reads using k-mer Coverage Histograms and Oligonucleotide Composition in Metagenomics Analysis
+**MetaBCC-LR**: Metagenomics Binning by Coverage and Composition for Long Reads
 
 ## Dependencies
 MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you will need to install the following python and C++ modules.
