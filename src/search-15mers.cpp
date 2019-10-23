@@ -24,20 +24,6 @@ u_int64_t revComp(u_int64_t x, size_t sizeKmer=15)
     return (res >> (2*( 32 - sizeKmer))) ;
 }
 
-u_int64_t toDeci(string &acgt, size_t start, size_t size)
-{
-    u_int64_t val = 0;
-
-    for (size_t i = start; i < start + size; i++)
-    {
-        val = (val << 2);
-        val += (acgt[i]>>1&3);
-        
-    }
-
-    return val;
-}
-
 vector<long> splitLine(string &line)
 {
     vector<long> vec(2);
@@ -62,29 +48,30 @@ vector<long> splitLine(string &line)
     return vec;
 }
 
-void readKmerFile(string filename, vector<long> &kmers)
+long readKmerFile(string filename, vector<long> &kmers)
 {
     ifstream myfile(filename);
     string line;
     vector<long> v;
+    long count = 0;
     while (getline(myfile, line))
     {
         v = splitLine(line);
         kmers[v[0]] = v[1];
         kmers[revComp(v[0])] = v[1];
+        count ++;
     }
 
     myfile.close();
 
-    return;
+    return count;
 }
 
 double *processLine(string &line, vector<long> &allKmers)
 {
     double *counts = new double[32];
-    long sum = 0, count, pos, k_size = 15, bin_size=5;
-    u_int64_t kmer;
-    static regex validKmers("^[CAGT]+$");
+    long sum = 0, count, pos, k_size = 15, bin_size = 10, len = 0;
+    u_int64_t val = 0;
 
     // to avoid garbage memory
     for (int i = 0; i < 32; i++)
@@ -92,27 +79,38 @@ double *processLine(string &line, vector<long> &allKmers)
         counts[i] = 0;
     }
 
-    for (size_t i = 0; i < line.length() - k_size - 1; i++)
+    for (size_t i = 0; i < line.length(); i++)
     {
-        //ignore kmers with non ACGT characters
-        if (!regex_match(line.substr(i, k_size),  validKmers)) {
+        if (!(line[i] == 'A' || line[i] == 'C' || line[i] == 'G' || line[i] == 'T'))
+        {
+            val = 0;
+            len = 0;
             continue;
         }
 
-        kmer = toDeci(line, i, k_size);
-        count = allKmers[(long)kmer];
-        pos = (count / bin_size) - 1;
+        val = (val << 2);
+        val = val & 1073741823;
+        val += (line[i] >> 1 & 3);
+        len++;
 
-        if (count <= bin_size)
+        if (len == 15)
         {
-            counts[0]++;
-            
+            // use val as the kmer for counting
+            len--;  
+            count = allKmers[(long)val];
+            pos = (count / bin_size) - 1;
+
+            if (count <= bin_size)
+            {
+                counts[0]++;
+                
+            }
+            else if (pos < 32 && pos > 0)
+            {
+                counts[pos]++;
+            }
+            sum++;          
         }
-        else if (pos < 32 && pos > 0)
-        {
-            counts[pos]++;
-        }
-        sum++;
     }
 
     for (int i = 0; i < 32; i++)
@@ -168,15 +166,15 @@ int main(int argc, char ** argv)
 {
     vector<long> kmers(1073741824, 0);
     vector<string> batch;
-    long lineNum = 0;
+    long lineNum = 0, count;
 
     string kmersFile =  argv[1];
     cout << "K-Mer file " << kmersFile << endl;
 
     cout << "LOADING KMERS TO RAM" << endl;
-    readKmerFile(kmersFile, kmers);
+    count = readKmerFile(kmersFile, kmers);
 
-    cout << "FINISHED LOADING KMERS TO RAM " << kmers.size() << endl;
+    cout << "FINISHED LOADING KMERS TO RAM " << count << endl;
 
     string inputPath =  argv[2];
     string outputPath =  argv[3];
@@ -210,7 +208,7 @@ int main(int argc, char ** argv)
 
         lineNum++;
 
-        if (batch.size() == 10000)
+        if (batch.size() == 100000)
         {
             processLinesBatch(batch, kmers, outputPath, threads);
             batch.clear();
