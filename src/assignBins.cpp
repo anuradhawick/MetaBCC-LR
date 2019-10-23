@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <map>
 #include <string>
 #include <cmath>
 
@@ -151,13 +150,11 @@ vector<Bin> getBinsFromFile(string &statsFile)
     return bins;
 }
 
-Bin getBestBin(vector<Bin> &bins, vector<long double> p3, vector<long double> p15)
+Bin getBestBin(vector<Bin> &bins, vector<long double> &p3, vector<long double> &p15)
 {
     Bin bestbin;
     long double maxProb15 = -INFINITY, maxProb3 = -INFINITY;
     long double prob15, prob3;
-
-    // cout << "here";
 
     for (Bin bin: bins)
     {
@@ -176,16 +173,15 @@ Bin getBestBin(vector<Bin> &bins, vector<long double> p3, vector<long double> p1
         }
     }
 
-    // cout << bestbin->getName() << endl;
     return bestbin;
 }
 
-void processLinesBatch(vector<vector<long double>> &batch3, vector<vector<long double>> &batch15, vector<Bin> bins, string &outputPath, int threads)
+void processLinesBatch(vector<vector<long double>> &batch3, vector<vector<long double>> &batch15, vector<Bin> &bins, string &outputPath, int threads)
 {
     vector<string> batchAnswers(batch3.size());
     string result = "";
 
-    #pragma omp parallel for num_threads(threads)
+    #pragma omp parallel for num_threads(threads) schedule(static, 1)
     for (uint i = 0; i < batchAnswers.size(); i++)
     {
         

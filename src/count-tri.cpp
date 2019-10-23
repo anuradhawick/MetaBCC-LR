@@ -4,71 +4,28 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <algorithm>
-#include <regex>
 
 using namespace std;
 
-
-int val(char &c)
+u_int64_t revComp(u_int64_t x, size_t sizeKmer=3)
 {
-    if (c == 'A')
-    {
-        return 0;
-    }
-    else if (c == 'C')
-    {
-        return 1;
-    }
-    else if (c == 'T')
-    {
-        return 2;
-    }
-    else
-    {
-        return 3;
-    }
+    u_int64_t res = x;
+
+    res = ((res>> 2 & 0x3333333333333333) | (res & 0x3333333333333333) <<  2);
+    res = ((res>> 4 & 0x0F0F0F0F0F0F0F0F) | (res & 0x0F0F0F0F0F0F0F0F) <<  4);
+    res = ((res>> 8 & 0x00FF00FF00FF00FF) | (res & 0x00FF00FF00FF00FF) <<  8);
+    res = ((res>>16 & 0x0000FFFF0000FFFF) | (res & 0x0000FFFF0000FFFF) << 16);
+    res = ((res>>32 & 0x00000000FFFFFFFF) | (res & 0x00000000FFFFFFFF) << 32);
+    res = res ^ 0xAAAAAAAAAAAAAAAA;
+
+    return (res >> (2*( 32 - sizeKmer))) ;
 }
 
-string revCmpl(string kmer)
+vector<double> getKmers(string &line, int size = 3)
 {
-    string reverseComplement = "";
-    static map<char, char> cmpl = {
-        {'A', 'T'},
-        {'G', 'C'},
-        {'C', 'G'},
-        {'T', 'A'}};
-
-    for (int i = kmer.length() - 1; i >= 0; i--)
-    {
-        reverseComplement += cmpl[kmer[i]];
-    }
-
-    return reverseComplement;
-}
-
-long toDeci(string str, int base = 4)
-{
-    int llen = str.length(), power = 1;
-    long num = 0;
-    for (int i = llen - 1; i >= 0; i--)
-    {
-        if (val(str[i]) >= base)
-        {
-            cout << "Invalid Number";
-            return -1;
-        }
-        num += val(str[i]) * power;
-        power = power * base;
-    }
-
-    return num;
-}
-
-vector<double> getKmers(string &readLine, int size = 3)
-{
-    static regex validKmers("^[CAGT]+$");
     double total = 0;
+    long  len = 0;
+    u_int64_t val = 0;
     map<int, double> kmers = {
         {0, 0},
         {1, 0},
@@ -105,14 +62,27 @@ vector<double> getKmers(string &readLine, int size = 3)
     };
     vector<double> stats;
 
-    for (int i = 0; i < (int)readLine.length() - size - 1; i++)
-    {
-        //ignore kmers with non ACGT characters
-        if (!regex_match(readLine.substr(i, size),  validKmers)) {
+    for (int i = 0; i < (int)line.length(); i++)
+    {        
+        if (!(line[i] == 'A' || line[i] == 'C' || line[i] == 'G' || line[i] == 'T'))
+        {
+            val = 0;
+            len = 0;
             continue;
         }
-        kmers[min(toDeci(readLine.substr(i, size)), toDeci(revCmpl(readLine.substr(i, size))))]++;
-        total++;
+
+        val = (val << 2);
+        val = val & 63;
+        val += (line[i] >> 1 & 3);
+        len++;
+
+        if (len == size)
+        {
+            // use val as the kmer for counting
+            len--;  
+            kmers[min(val, revComp(val, 3))]++;
+            total++;          
+        }
     }
 
     for (map<int, double>::iterator it = kmers.begin(); it != kmers.end(); ++it)
@@ -123,14 +93,14 @@ vector<double> getKmers(string &readLine, int size = 3)
     return stats;
 }
 
-void processLinesBatch(vector<string> &linesBatch, string &outputPath)
+void processLinesBatch(vector<string> &linesBatch, string &outputPath, int threads)
 {
     vector<vector<double>> results(linesBatch.size());
     ofstream output;
     output.open(outputPath, ios::out | ios::app);
     string o = "";
 
-    #pragma omp parallel for num_threads(8)
+    #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
     for (size_t i = 0; i < linesBatch.size(); i++)
     {
         results[i] = getKmers(linesBatch[i]);
@@ -186,14 +156,14 @@ int main(int argc, char ** argv)
             batch.push_back(line);
         }
         lineNum++;
-        if (batch.size() == 10000)
+        if (batch.size() == 100000)
         {
-            processLinesBatch(batch, outputPath);
+            processLinesBatch(batch, outputPath, threads);
             batch.clear();
         }
     }
 
-    processLinesBatch(batch, outputPath);
+    processLinesBatch(batch, outputPath, threads);
 
     myfile.close();
     batch.clear();

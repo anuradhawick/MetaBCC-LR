@@ -3,10 +3,6 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <map>
-#include <unordered_set>
-#include <algorithm>
-#include <regex>
 
 using namespace std;
 
@@ -70,7 +66,7 @@ long readKmerFile(string filename, vector<long> &kmers)
 double *processLine(string &line, vector<long> &allKmers)
 {
     double *counts = new double[32];
-    long sum = 0, count, pos, k_size = 15, bin_size = 10, len = 0;
+    long sum = 0, count, pos, bin_size = 10, len = 0;
     u_int64_t val = 0;
 
     // to avoid garbage memory
@@ -129,7 +125,7 @@ void processLinesBatch(vector<string> &linesBatch, vector<long> &allKmers, strin
 {
     vector<double *> batchAnswers(linesBatch.size());
 
-    #pragma omp parallel for num_threads(threads)
+    #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
     for (uint i = 0; i < linesBatch.size(); i++)
     {
         batchAnswers[i] = processLine(linesBatch[i], allKmers);
