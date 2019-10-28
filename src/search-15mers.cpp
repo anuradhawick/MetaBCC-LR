@@ -192,7 +192,7 @@ int main(int argc, char ** argv)
 
     while (getline(myfile, line))
     {
-        if (lineNum % 4 != 1)
+        if (lineNum % 2 != 1)
         {
             lineNum++;
             continue;

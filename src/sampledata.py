@@ -19,7 +19,11 @@ parser.add_argument('-ids',
                     type=str,
                     required=False,
                     default=None)                    
-
+parser.add_argument('-rl',
+                    help="Read length of each read",
+                    type=str,
+                    required=False,
+                    default=None) 
 parser.add_argument('-c',
                     help="Number of profiles to sample",
                     type=int,
@@ -33,6 +37,7 @@ prof15 = args.p15
 prof3Out = prof3 + "_sampled"
 prof15Out = prof15 + "_sampled"
 idsFile = args.ids
+lengthsFile = args.rl
 COUNT = args.c
 
 o3 = open(prof3Out, "w+")
@@ -41,19 +46,30 @@ o15 = open(prof15Out, "w+")
 random_linenos = []
 ids = []
 sampledIds = []
+lengths = []
 
 if idsFile:
     idsOut = idsFile + "_sampled"
     with open(idsFile) as f:
         ids = f.read().split()
 
+with open(lengthsFile) as f:
+    lengths = list(map(int, f.read().strip().split("\n")))
+
+# zip order of reads and lengths
+r_l = list(zip([x for x in range(len(lengths))], lengths))
+# reverse sort by lengths; longest at first
+srtd = sorted(r_l, key=lambda x: x[1], reverse=True)
+# get longest 500000
+longestSet = srtd[0:500000]
+# sample COUNT amount of reads and resort by their order
+longestSet = random.sample(longestSet, 100000)
+srtByRid = sorted(longestSet, key=lambda x: x[0])
+
 with open(prof3) as f:
-    linecount = sum(1 for line in f)
-    f.seek(0)
-    lst = list(range(0, linecount))
-    random.shuffle(lst)
-    random_linenos = sorted(random.sample(lst, COUNT), reverse = True)
-    lines_copy = list(random_linenos)
+    random_linenos = list(srtByRid)
+    lines_copy = list(srtByRid)
+    
     lineno = lines_copy.pop()
 
     for n, line in enumerate(f):

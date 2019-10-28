@@ -181,7 +181,7 @@ void processLinesBatch(vector<vector<long double>> &batch3, vector<vector<long d
     vector<string> batchAnswers(batch3.size());
     string result = "";
 
-    #pragma omp parallel for num_threads(threads) schedule(static, 1)
+    #pragma omp parallel for num_threads(threads) schedule(static, threads)
     for (uint i = 0; i < batchAnswers.size(); i++)
     {
         

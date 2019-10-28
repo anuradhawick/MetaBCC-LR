@@ -33,6 +33,7 @@ output = args.o
 threads = args.t
 ids = args.i
 
+# Validation of inputs
 if threads <= 0:
     print("Minimum number of threads is 1. Using thread count 1 and continue")
     threads = 1
@@ -49,15 +50,25 @@ if not os.path.isfile(ids):
 if not os.path.exists(output):
     os.makedirs(output)
 
+if not readsPath.split(".")[-1].lower() in ['fq', 'fasta', 'fa', 'fastq']:
+    print("Unable to detect file type of reads. Please use either FASTA of FASTQ. Good Bye!")
+    sys.exit(1)
+
 def checkProc(ret, n=None):
     if ret != 0:
         if n: print("Error in step:", n)
         print("Failed due to an error. Please check the log. Good Bye!")
         sys.exit(ret)
 
+fileType = readsPath.split(".")[-1].lower()
 
+# convert reads to filtered fasta
 print("Filtering reads")
-cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fq" """.format(os.path.realpath(__file__), readsPath, output)
+if fileType in ['fq', 'fastq']:
+    cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fq" fq""".format(os.path.realpath(__file__), readsPath, output)
+else:
+    cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fq" fa""".format(os.path.realpath(__file__), readsPath, output)
+    
 o = os.system(cmdFilter)
 checkProc(o, "Filtering reads")
 
@@ -90,11 +101,19 @@ cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fq" "{
 o = os.system(cmd)
 checkProc(o, "Counting 15-mer profiles")
 
+print("Obtaining read lengths")
+if fileType in ['fq', 'fastq']:
+    cmd = """awk "{{ if(NR%4==2) print length($1) }}" "{0}/filteredReads.fq"> "{0}/readlengths.txt" """.format(output)
+else:
+    cmd = """awk "{{ if(NR%2==2) print length($1) }}" "{0}/filteredReads.fq"> "{0}/readlengths.txt" """.format(output)
+o = os.system(cmd)
+checkProc(o, "Obtaining read lengths")
+
 print("Sampling Reads")
 if ids:
-    cmd = """python {0}/src/sampledata.py -p3 {0}/profiles/3mers -p15 {0}/profiles/15mers -c 10000 -ids "{2}" """.format(os.path.realpath(__file__), output, ids)
+    cmd = """python {0}/src/sampledata.py -rl "{0}/readlengths.txt" -p3 {0}/profiles/3mers -p15 {0}/profiles/15mers -c 10000 -ids "{2}" """.format(os.path.realpath(__file__), output, ids)
 else:
-    cmd = """python {0}/src/sampledata.py -p3 {0}/profiles/3mers -p15 {0}/profiles/15mers -c 10000""".format(os.path.realpath(__file__), output)
+    cmd = """python {0}/src/sampledata.py -rl "{0}/readlengths.txt" -p3 {0}/profiles/3mers -p15 {0}/profiles/15mers -c 10000""".format(os.path.realpath(__file__), output)
 o = os.system(cmd)
 checkProc(o, "Sampling Reads")
 
