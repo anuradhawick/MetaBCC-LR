@@ -220,8 +220,6 @@ def evaluateClusters(clusters, species):
     for c in all_clusters:
         cc = clusters[c]
         for s in cc.getLabels():
-            # if s == "-1":
-            #     continue
             mat[s_map[s]][c_map[c]] += 1
             labels.append(c_map[c])
             truth.append(s_map[s])
@@ -304,11 +302,6 @@ def clusterReads(cluster, t, sample=False, plot=False):
             new_clusters[cname] = Cluster(cname)
         new_clusters[cname].addRead(read)
 
-    # for cname in list(new_clusters.keys()):
-    #     if len(new_clusters[cname].reads) < 100:
-    #         print("discard cluster", cname)
-    #         del new_clusters[cname]
-
     # reassign all reads back
     if sample and len(cluster.reads) > 2000:
         new_clustersAllReads = {}
@@ -332,14 +325,9 @@ def clusterReads(cluster, t, sample=False, plot=False):
         return new_clustersAllReads
     return new_clusters
 
-
-
-
 stats = open(o + "/cluster-stats.txt", "w+")
 
 clx = clusterReads(cluster_0, "coverage", False, True)
-# plt.show()
-
 
 # for each cov cluster cluster by composition
 print("\n")
@@ -359,7 +347,6 @@ def clusterByComposition(cluster):
     return result
 
 for cn, c in clx.items():
-    # t = clusterReads(c, "composition", True, True)
     t = clusterByComposition(c)
         
     cly.update(t)
@@ -376,28 +363,14 @@ for cn, c in clx.items():
         stats.write(" ".join(list(map(str, cc.getStdP3()))))
         stats.write("\n")
 
-
 # discarding poor bins
 for k in list(cly.keys()):
-    print(k, len(cly[k].reads))
     if len(cly[k].reads) < 100:
         del cly[k]
 
-    # if len(t) > 1:
-    #     for cn2, c2 in t.items():
-    #         t2 = clusterReads(c2, "composition", True, True)
+stats.close()
 
-    #         if len(t2) > 1:
-    #             for cn3, c3 in t2.items():
-    #                 t3 = clusterReads(c3, "composition", True, True)
-    #             cly.update(t3)
-    #         cly.update(t2)
-    # else:
-    #     cly.update(t)
-    
+if ids:
+    evaluateClusters(cly, all_species)
 
-# stats.close()
 
-evaluateClusters(cly, all_species)
-
-# plt.show()

@@ -51,7 +51,8 @@ lengths = []
 if idsFile:
     idsOut = idsFile + "_sampled"
     with open(idsFile) as f:
-        ids = f.read().split()
+        ids = f.read().strip().split("\n")
+        print(len(ids), idsFile)
 
 with open(lengthsFile) as f:
     lengths = list(map(int, f.read().strip().split("\n")))
@@ -63,14 +64,13 @@ srtd = sorted(r_l, key=lambda x: x[1], reverse=True)
 # get longest 500000
 longestSet = srtd[0:500000]
 # sample COUNT amount of reads and resort by their order
-longestSet = random.sample(longestSet, 100000)
+longestSet = random.sample(longestSet, COUNT)
 srtByRid = sorted(longestSet, key=lambda x: x[0])
 
 with open(prof3) as f:
-    random_linenos = list(srtByRid)
     lines_copy = list(srtByRid)
-    
-    lineno = lines_copy.pop()
+
+    lineno = lines_copy.pop(0)[0]
 
     for n, line in enumerate(f):
         if n == lineno:
@@ -78,22 +78,25 @@ with open(prof3) as f:
             if idsFile:
                 sampledIds.append(re.sub(r'_Read|@|_[0-9]+', '', ids[n]))
             if len(lines_copy) > 0:
-                lineno = lines_copy.pop()
+                lineno = lines_copy.pop(0)[0]
         elif len(lines_copy) == 0:
             break
 
 
     with open(prof15) as f:
-        lines_copy = list(random_linenos)
-        lineno = lines_copy.pop()
+        lines_copy = list(srtByRid)
+        lineno = lines_copy.pop(0)[0]
         for n, line in enumerate(f):
             if n == lineno:
                 o15.write(line)
                 if len(lines_copy) > 0:
-                    lineno = lines_copy.pop()
+                    lineno = lines_copy.pop(0)[0]
             elif len(lines_copy) == 0:
                 break
 if idsFile:
     with open(idsOut, "w+") as ff:
         for x in sampledIds:
             ff.write(x + "\n")
+
+o3.close()
+o15.close()
