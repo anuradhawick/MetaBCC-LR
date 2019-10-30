@@ -52,17 +52,19 @@ if idsFile:
     idsOut = idsFile + "_sampled"
     with open(idsFile) as f:
         ids = f.read().strip().split("\n")
-        print(len(ids), idsFile)
 
 with open(lengthsFile) as f:
     lengths = list(map(int, f.read().strip().split("\n")))
+
+if COUNT <= 0:
+    COUNT = int(len(lengths)/100)
 
 # zip order of reads and lengths
 r_l = list(zip([x for x in range(len(lengths))], lengths))
 # reverse sort by lengths; longest at first
 srtd = sorted(r_l, key=lambda x: x[1], reverse=True)
-# get longest 500000
-longestSet = srtd[0:500000]
+# get longest 10%
+longestSet = srtd[0:int(len(lengths)/10)]
 # sample COUNT amount of reads and resort by their order
 longestSet = random.sample(longestSet, COUNT)
 srtByRid = sorted(longestSet, key=lambda x: x[0])

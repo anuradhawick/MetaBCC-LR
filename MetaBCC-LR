@@ -25,12 +25,12 @@ parser.add_argument('-i',
                     required=False,
                     default=None)
 parser.add_argument('-c',
-                    metavar='<No of reads to sample [10000]>',
-                    help="Number of reads to sample in order to determine the number of bins. Set to 10000 by default. Changing this parameter will\
+                    metavar='<No of reads to sample>',
+                    help="Number of reads to sample in order to determine the number of bins. Set to 1%% of reads by default. Changing this parameter will\
                         affect whether low coverage species are separated or not.",
                     type=int,
                     required=False,
-                    default=10000)                    
+                    default=0)                    
 parser.add_argument('-o', metavar='<DEST>', help="Output directory", type=str, required=True)
 
 args = parser.parse_args()
@@ -87,7 +87,7 @@ o = os.system(cmdFilter)
 checkProc(o, "Filtering reads")
 
 print("Running DSK")
-cmdDSK = """dsk -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
+cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
 o = os.system(cmdDSK)
 checkProc(o, "Running DSK")
 

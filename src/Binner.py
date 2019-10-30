@@ -10,9 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 import re
-from math import factorial
 from random import sample
-from collections import Counter
 from sklearn.metrics.cluster import adjusted_rand_score
 
 parser = argparse.ArgumentParser(description='Identify Initial Bins.')
