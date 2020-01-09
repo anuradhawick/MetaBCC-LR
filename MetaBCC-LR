@@ -30,7 +30,13 @@ parser.add_argument('-c',
                         affect whether low coverage species are separated or not.",
                     type=int,
                     required=False,
-                    default=0)                    
+                    default=0)         
+parser.add_argument('-s',
+                    metavar='<Sensitivity>',
+                    help="Value between 1 and 10, 1 for high sensitivity and 10 for low sensitivity. Higher helps recovering low abundant species (No. of species > 100)",
+                    type=int,
+                    required=False,
+                    default=10)                               
 parser.add_argument('-o', metavar='<DEST>', help="Output directory", type=str, required=True)
 
 args = parser.parse_args()
@@ -40,11 +46,17 @@ output = args.o
 threads = args.t
 ids = args.i
 COUNT = args.c
+sensitivity = args.s
 
 # Validation of inputs
 if threads <= 0:
     print("Minimum number of threads is 1. Using thread count 1 and continue")
     threads = 1
+
+if not (s >= 1 and s <= 10):
+    print("Sensitivity must be within 1-10 inclusive")
+    print("Exitting process. Good Bye!")
+    sys.exit(1)
 
 if not os.path.isfile(readsPath):
     print("Failed to open reads file")
@@ -83,42 +95,42 @@ else:
     else:
         cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fa""".format(os.path.dirname(__file__), readsPath, output)
     
-o = os.system(cmdFilter)
-checkProc(o, "Filtering reads")
+# o = os.system(cmdFilter)
+# checkProc(o, "Filtering reads")
 
-print("Running DSK")
-cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
-o = os.system(cmdDSK)
-checkProc(o, "Running DSK")
+# print("Running DSK")
+# cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
+# o = os.system(cmdDSK)
+# checkProc(o, "Running DSK")
 
-print("Reading DSK output")
-cmdDSKRead = """python {0}/src/scan-dsk.py {1}/DSK/filteredReads.h5 {1}/DSK/ {2}""".format(os.path.dirname(__file__), output, threads)
-o = os.system(cmdDSKRead)
-checkProc(o, "Reading DSK output")
+# print("Reading DSK output")
+# cmdDSKRead = """python {0}/src/scan-dsk.py {1}/DSK/filteredReads.h5 {1}/DSK/ {2}""".format(os.path.dirname(__file__), output, threads)
+# o = os.system(cmdDSKRead)
+# checkProc(o, "Reading DSK output")
 
-print("Gathering DSK data")
-cmdGather = """cat "{0}"/DSK/*.chunk > "{0}/DSK/15mersCounts" """.format(output)
-o = os.system(cmdGather)
-checkProc(o, "Gathering DSK data")
+# print("Gathering DSK data")
+# cmdGather = """cat "{0}"/DSK/*.chunk > "{0}/DSK/15mersCounts" """.format(output)
+# o = os.system(cmdGather)
+# checkProc(o, "Gathering DSK data")
 
-print("Counting Trimers")
-cmd = """mkdir -p "{0}/profiles" """.format(output)
-o = os.system(cmd)
-checkProc(o, "Making directory for profiles")
+# print("Counting Trimers")
+# cmd = """mkdir -p "{0}/profiles" """.format(output)
+# o = os.system(cmd)
+# checkProc(o, "Making directory for profiles")
 
-cmd = """"{0}/bin/countTrimers" "{1}/filteredReads.fa" "{1}/profiles/3mers" {2}""".format(os.path.dirname(__file__), output, threads)
-o = os.system(cmd)
-checkProc(o, "Counting Trimers")
+# cmd = """"{0}/bin/countTrimers" "{1}/filteredReads.fa" "{1}/profiles/3mers" {2}""".format(os.path.dirname(__file__), output, threads)
+# o = os.system(cmd)
+# checkProc(o, "Counting Trimers")
 
-print("Counting 15-mer profiles")
-cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2}""".format(os.path.dirname(__file__), output, threads)
-o = os.system(cmd)
-checkProc(o, "Counting 15-mer profiles")
+# print("Counting 15-mer profiles")
+# cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2}""".format(os.path.dirname(__file__), output, threads)
+# o = os.system(cmd)
+# checkProc(o, "Counting 15-mer profiles")
 
-print("Obtaining read lengths")
-cmd = """awk "{{ if(NR%2==0) print length($1) }}" "{0}/filteredReads.fa" > "{0}/filteredReadLengths.txt" """.format(output)
-o = os.system(cmd)
-checkProc(o, "Obtaining read lengths")
+# print("Obtaining read lengths")
+# cmd = """awk "{{ if(NR%2==0) print length($1) }}" "{0}/filteredReads.fa" > "{0}/filteredReadLengths.txt" """.format(output)
+# o = os.system(cmd)
+# checkProc(o, "Obtaining read lengths")
 
 print("Sampling Reads")
 if ids:

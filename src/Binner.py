@@ -28,6 +28,11 @@ parser.add_argument('-ids',
                     type=str,
                     required=False,
                     default=None)
+parser.add_argument('-s',
+                    help="Sensitivity for binning",
+                    type=int,
+                    required=False,
+                    default=10)
 parser.add_argument('-o', help="Output directory", type=str, required=True)
 
 args = parser.parse_args()
@@ -36,6 +41,7 @@ p3 = args.p3
 p15 = args.p15
 o = args.o
 ids = args.ids
+sensitivity = args.s
 
 if not os.path.exists(o):
     os.makedirs(o)
@@ -194,7 +200,7 @@ def estimateEpsilon(X_embedded, plot=False):
         plt.figure()
         plt.plot(distances)
         kneedle.plot_knee_normalized()
-    return 10 * distances[kneedle.knee]
+    return sensitivity * distances[kneedle.knee]
 
 
 def evaluateClusters(clusters, species):
@@ -361,10 +367,11 @@ for cn, c in clx.items():
         stats.write(" ".join(list(map(str, cc.getStdP3()))))
         stats.write("\n")
 
-# discarding poor bins
-for k in list(cly.keys()):
-    if len(cly[k].reads) < 100:
-        del cly[k]
+if sensitivity < 8:
+    # discarding poor bins
+    for k in list(cly.keys()):
+        if len(cly[k].reads) < 100:
+            del cly[k]
 
 stats.close()
 
