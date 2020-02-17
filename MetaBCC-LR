@@ -53,7 +53,7 @@ if threads <= 0:
     print("Minimum number of threads is 1. Using thread count 1 and continue")
     threads = 1
 
-if not (s >= 1 and s <= 10):
+if not (sensitivity >= 1 and sensitivity <= 10):
     print("Sensitivity must be within 1-10 inclusive")
     print("Exitting process. Good Bye!")
     sys.exit(1)
@@ -142,9 +142,9 @@ checkProc(o, "Sampling Reads")
 
 print("Binning sampled reads")
 if ids:
-    cmd = """python "{0}/src/Binner.py" -p3 "{1}/profiles/3mers_sampled" -p15 "{1}/profiles/15mers_sampled" -o "{1}/Binning" -ids "{1}"/idsFiltered.txt_sampled """.format(os.path.dirname(__file__), output)
+    cmd = """python "{0}/src/Binner.py" -p3 "{1}/profiles/3mers_sampled" -p15 "{1}/profiles/15mers_sampled" -o "{1}/Binning" -ids "{1}"/idsFiltered.txt_sampled -s {2}""".format(os.path.dirname(__file__), output, sensitivity)
 else:
-    cmd = """python "{0}/src/Binner.py" -p3 "{1}/profiles/3mers_sampled" -p15 "{1}/profiles/15mers_sampled" -o "{1}/Binning" """.format(os.path.dirname(__file__), output)
+    cmd = """python "{0}/src/Binner.py" -p3 "{1}/profiles/3mers_sampled" -p15 "{1}/profiles/15mers_sampled" -o "{1}/Binning"  -s {2}""".format(os.path.dirname(__file__), output, sensitivity)
 o = os.system(cmd)
 checkProc(o, "Binning sampled reads")
 
