@@ -33,10 +33,13 @@ parser.add_argument('-c',
                     default=0)         
 parser.add_argument('-s',
                     metavar='<Sensitivity>',
-                    help="Value between 1 and 10, 1 for high sensitivity and 10 for low sensitivity. Higher helps recovering low abundant species (No. of species > 100)",
+                    help="Value between 1 and 10, Higher helps recovering low abundant species (No. of species > 100)",
                     type=int,
                     required=False,
-                    default=10)                               
+                    default=10)        
+parser.add_argument('--resume',
+                    action='store_true',
+                    help='Continue from the last step or the binning step (which ever comes first). Can save time needed to run DSK and obtain k-mers. Ideal for sensitivity tuning')                       
 parser.add_argument('-o', metavar='<DEST>', help="Output directory", type=str, required=True)
 
 args = parser.parse_args()
@@ -47,6 +50,8 @@ threads = args.t
 ids = args.i
 COUNT = args.c
 sensitivity = args.s
+resume = args.resume
+checkpointsPath = output + "/checkpoints"
 
 # Validation of inputs
 if threads <= 0:
@@ -82,63 +87,111 @@ def checkProc(ret, n=None):
 
 fileType = readsPath.split(".")[-1].lower()
 
-# convert reads to filtered fasta
-print("Filtering reads")
-if fileType in ['fq', 'fastq']:
-    if ids:
-        cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fq "{3}" "{2}"/idsFiltered.txt """.format(os.path.dirname(__file__), readsPath, output, ids)
+if not resume and False:
+    with open(checkpointsPath, "w+") as f:
+        data = {}
+        data['r'] = readsPath
+        data['o'] = output
+        data['t'] = threads
+        data['i'] = ids
+        data['c'] = COUNT
+        data['s'] = sensitivity
+        
+        f.write(str(data) + "\n")
+
+steps_completed = []
+data = {}
+
+if resume and False:
+    if not os.path.isfile(checkpointsPath):
+        checkProc(1, "Unable to load checkpoints file")
     else:
-        cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fq""".format(os.path.dirname(__file__), readsPath, output)
-else:
-    if ids:
-        cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fa "{3}" "{2}"/idsFiltered.txt """.format(os.path.dirname(__file__), readsPath, output, ids)
+        with open(checkpointsPath, "r") as f:
+            lines = f.read().strip().split("\n")
+            data = eval(lines[0])
+            if (data['r'] != readsPath or data['o'] != output or data['i'] != ids):
+                checkProc(1, "Only -t, -c and -s parameters may be altered. Others must be same as before")
+            else:
+                steps_completed = lines[1::]
+
+
+if resume and "filtering" not in steps_completed or not resume:
+    # convert reads to filtered fasta
+    print("Filtering reads")
+    if fileType in ['fq', 'fastq']:
+        if ids:
+            cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fq "{3}" "{2}"/idsFiltered.txt """.format(os.path.dirname(__file__), readsPath, output, ids)
+        else:
+            cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fq""".format(os.path.dirname(__file__), readsPath, output)
     else:
-        cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fa""".format(os.path.dirname(__file__), readsPath, output)
+        if ids:
+            cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fa "{3}" "{2}"/idsFiltered.txt """.format(os.path.dirname(__file__), readsPath, output, ids)
+        else:
+            cmdFilter = """"{0}/bin/filter" "{1}" "{2}/filteredReads.fa" fa""".format(os.path.dirname(__file__), readsPath, output)
     
-o = os.system(cmdFilter)
-checkProc(o, "Filtering reads")
+    o = os.system(cmdFilter)
+    checkProc(o, "Filtering reads")
 
-print("Running DSK")
-cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
-o = os.system(cmdDSK)
-checkProc(o, "Running DSK")
+    with open(checkpointsPath, "a") as f:
+        f.write("filtering\n")
 
-print("Reading DSK output")
-cmdDSKRead = """python {0}/src/scan-dsk.py {1}/DSK/filteredReads.h5 {1}/DSK/ {2}""".format(os.path.dirname(__file__), output, threads)
-o = os.system(cmdDSKRead)
-checkProc(o, "Reading DSK output")
+if resume and "dsk" not in steps_completed or not resume:
+    print("Running DSK")
+    cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
+    o = os.system(cmdDSK)
+    checkProc(o, "Running DSK")
 
-print("Gathering DSK data")
-cmdGather = """cat "{0}"/DSK/*.chunk > "{0}/DSK/15mersCounts" """.format(output)
-o = os.system(cmdGather)
-checkProc(o, "Gathering DSK data")
+    print("Reading DSK output")
+    cmdDSKRead = """python {0}/src/scan-dsk.py {1}/DSK/filteredReads.h5 {1}/DSK/ {2}""".format(os.path.dirname(__file__), output, threads)
+    o = os.system(cmdDSKRead)
+    checkProc(o, "Reading DSK output")
 
-print("Counting Trimers")
-cmd = """mkdir -p "{0}/profiles" """.format(output)
-o = os.system(cmd)
-checkProc(o, "Making directory for profiles")
+    print("Gathering DSK data")
+    cmdGather = """cat "{0}"/DSK/*.chunk > "{0}/DSK/15mersCounts" """.format(output)
+    o = os.system(cmdGather)
+    checkProc(o, "Gathering DSK data")
 
-cmd = """"{0}/bin/countTrimers" "{1}/filteredReads.fa" "{1}/profiles/3mers" {2}""".format(os.path.dirname(__file__), output, threads)
-o = os.system(cmd)
-checkProc(o, "Counting Trimers")
+    with open(checkpointsPath, "a") as f:
+        f.write("dsk\n")
 
-print("Counting 15-mer profiles")
-cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2}""".format(os.path.dirname(__file__), output, threads)
-o = os.system(cmd)
-checkProc(o, "Counting 15-mer profiles")
+if resume and "trimers" not in steps_completed or not resume:
+    print("Counting Trimers")
+    cmd = """mkdir -p "{0}/profiles" """.format(output)
+    o = os.system(cmd)
+    checkProc(o, "Making directory for profiles")
 
-print("Obtaining read lengths")
-cmd = """awk "{{ if(NR%2==0) print length($1) }}" "{0}/filteredReads.fa" > "{0}/filteredReadLengths.txt" """.format(output)
-o = os.system(cmd)
-checkProc(o, "Obtaining read lengths")
+    cmd = """"{0}/bin/countTrimers" "{1}/filteredReads.fa" "{1}/profiles/3mers" {2}""".format(os.path.dirname(__file__), output, threads)
+    o = os.system(cmd)
+    checkProc(o, "Counting Trimers")
 
-print("Sampling Reads")
-if ids:
-    cmd = """python {0}/src/sampledata.py -rl "{1}/filteredReadLengths.txt" -p3 {1}/profiles/3mers -p15 {1}/profiles/15mers -c {2} -ids "{1}"/idsFiltered.txt """.format(os.path.dirname(__file__), output, COUNT)
-else:
-    cmd = """python {0}/src/sampledata.py -rl "{1}/filteredReadLengths.txt" -p3 {1}/profiles/3mers -p15 {1}/profiles/15mers -c {2}""".format(os.path.dirname(__file__), output, COUNT)
-o = os.system(cmd)
-checkProc(o, "Sampling Reads")
+    with open(checkpointsPath, "a") as f:
+        f.write("trimers\n")
+
+if resume and "15mers" not in steps_completed or not resume:
+    print("Counting 15-mer profiles")
+    cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2}""".format(os.path.dirname(__file__), output, threads)
+    o = os.system(cmd)
+    checkProc(o, "Counting 15-mer profiles")
+
+    with open(checkpointsPath, "a") as f:
+        f.write("15mers\n")
+
+if resume and "sample" not in steps_completed or not resume or resume and data['c'] != COUNT:
+    print("Obtaining read lengths")
+    cmd = """awk "{{ if(NR%2==0) print length($1) }}" "{0}/filteredReads.fa" > "{0}/filteredReadLengths.txt" """.format(output)
+    o = os.system(cmd)
+    checkProc(o, "Obtaining read lengths")
+
+    print("Sampling Reads")
+    if ids:
+        cmd = """python {0}/src/sampledata.py -rl "{1}/filteredReadLengths.txt" -p3 {1}/profiles/3mers -p15 {1}/profiles/15mers -c {2} -ids "{1}"/idsFiltered.txt """.format(os.path.dirname(__file__), output, COUNT)
+    else:
+        cmd = """python {0}/src/sampledata.py -rl "{1}/filteredReadLengths.txt" -p3 {1}/profiles/3mers -p15 {1}/profiles/15mers -c {2}""".format(os.path.dirname(__file__), output, COUNT)
+    o = os.system(cmd)
+    checkProc(o, "Sampling Reads")
+
+    with open(checkpointsPath, "a") as f:
+        f.write("sample\n")
 
 print("Binning sampled reads")
 if ids:

@@ -41,7 +41,7 @@ p3 = args.p3
 p15 = args.p15
 o = args.o
 ids = args.ids
-sensitivity = args.s
+sensitivity = 11 - args.s
 
 if not os.path.exists(o):
     os.makedirs(o)
@@ -367,11 +367,11 @@ for cn, c in clx.items():
         stats.write(" ".join(list(map(str, cc.getStdP3()))))
         stats.write("\n")
 
-if sensitivity < 8:
-    # discarding poor bins
-    for k in list(cly.keys()):
-        if len(cly[k].reads) < 100:
-            del cly[k]
+# if sensitivity < 8:
+#     # discarding poor bins
+#     for k in list(cly.keys()):
+#         if len(cly[k].reads) < 100:
+#             del cly[k]
 
 stats.close()
 
