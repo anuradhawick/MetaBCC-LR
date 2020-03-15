@@ -44,7 +44,7 @@ cd MetaBCC-LR
 ./MetaBCC-LR -h
 
 usage: MetaBCC-LR [-h] -r <READS PATH> [-t <THREADS>] [-i <IDS>]
-                  [-c <No of reads to sample [10000]>] -o <DEST>
+                  [-c <No of reads to sample [1% of all reads]>] -o <DEST>
 
 MetaBCC-LR Help. A tool developed for binning of metagenomics long reads
 (PacBio/ONT). Tool utilizes composition and coverage profiles of reads based
@@ -56,9 +56,9 @@ optional arguments:
   -r <READS PATH>       Reads path (FASTQ)
   -t <THREADS>          Thread limit
   -i <IDS>              Read ids of reads (For dry runs with ground truth)
-  -c <No of reads to sample [10000]>
+  -c <No of reads to sample [1% of all reads]>
                         Number of reads to sample in order to determine the
-                        number of bins. Set to 10000 by default. Changing this
+                        number of bins. Set to 1% of total reads count by default. Changing this
                         parameter will affect whether low coverage species are
                         separated or not.
   -o <DEST>             Output directory
