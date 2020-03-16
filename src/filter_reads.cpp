@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <regex>
 
 using namespace std;
 
@@ -14,7 +13,6 @@ int main(int argc, char ** argv)
     truthPath, truthOutputPath;
     ofstream outfileTruth;
     ifstream truthfile;
-    regex reg("(_Read_[0-9]*)|(^@)|(_[0-9]+)");
 
     if (argc == 6)
     {
@@ -36,7 +34,6 @@ int main(int argc, char ** argv)
         if (argc == 6)
         {
             getline(truthfile, truth);
-            truth = regex_replace(truth, reg, "");
         }
 
         if (type == "fq") {

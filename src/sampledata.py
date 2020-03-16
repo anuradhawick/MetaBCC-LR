@@ -1,6 +1,5 @@
 import sys
 import random
-import re
 import argparse
 
 parser = argparse.ArgumentParser(description='Sample profiles for analysis.')
@@ -63,7 +62,12 @@ r_l = list(zip([x for x in range(len(lengths))], lengths))
 # reverse sort by lengths; longest at first
 srtd = sorted(r_l, key=lambda x: x[1], reverse=True)
 # get longest 10%
-longestSet = srtd[0:int(len(lengths)/10)]
+# if sample size larger than population size do not use lengths for discrimination
+# if (len(lengths)/10 < COUNT):
+#     longestSet = srtd[0:int(len(lengths))]
+# else:
+#     longestSet = srtd[0:int(len(lengths)/10)]
+longestSet = srtd[0:int(len(lengths))]
 # sample COUNT amount of reads and resort by their order
 longestSet = random.sample(longestSet, COUNT)
 srtByRid = sorted(longestSet, key=lambda x: x[0])
@@ -77,7 +81,7 @@ with open(prof3) as f:
         if n == lineno:
             o3.write(line)
             if idsFile:
-                sampledIds.append(re.sub(r'_Read|@|_[0-9]+', '', ids[n]))
+                sampledIds.append(ids[n])
             if len(lines_copy) > 0:
                 lineno = lines_copy.pop(0)[0]
         elif len(lines_copy) == 0:

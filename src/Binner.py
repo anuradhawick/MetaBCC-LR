@@ -9,9 +9,9 @@ import argparse
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
-import re
 from random import sample
 from sklearn.metrics.cluster import adjusted_rand_score
+import shutil
 
 parser = argparse.ArgumentParser(description='Identify Initial Bins.')
 
@@ -34,6 +34,7 @@ parser.add_argument('-s',
                     required=False,
                     default=10)
 parser.add_argument('-o', help="Output directory", type=str, required=True)
+parser.add_argument('-t', help="Threads for DB-SCAN", type=int, required=False, default=8)
 
 args = parser.parse_args()
 
@@ -41,10 +42,13 @@ p3 = args.p3
 p15 = args.p15
 o = args.o
 ids = args.ids
+threads = args.t
 sensitivity = 11 - args.s
 
-if not os.path.exists(o):
-    os.makedirs(o)
+if os.path.exists(o):
+    shutil.rmtree(o)
+
+os.makedirs(o)
 
 
 class Read:
@@ -268,7 +272,7 @@ def clusterReads(cluster, t, sample=False, plot=False):
         else:
             embeddedRoot = cluster.embedP15()
     
-    clustering = DBSCAN(eps=estimateEpsilon(embeddedRoot)).fit(embeddedRoot)
+    clustering = DBSCAN(eps=estimateEpsilon(embeddedRoot), n_jobs=threads).fit(embeddedRoot)
     if t == "composition":
         labels = list(map(lambda x: cluster.name + "-c-" + str(x), list(clustering.labels_)))
     else:
@@ -367,11 +371,11 @@ for cn, c in clx.items():
         stats.write(" ".join(list(map(str, cc.getStdP3()))))
         stats.write("\n")
 
-# if sensitivity < 8:
-#     # discarding poor bins
-#     for k in list(cly.keys()):
-#         if len(cly[k].reads) < 100:
-#             del cly[k]
+if sensitivity < 8:
+    # discarding poor bins
+    for k in list(cly.keys()):
+        if len(cly[k].reads) < 100:
+            del cly[k]
 
 stats.close()
 
