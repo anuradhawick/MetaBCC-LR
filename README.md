@@ -83,4 +83,4 @@ optional arguments:
 * Reads path should contain FASTQ reads in the standard FASTQ format.
 * Output path is the foldername that you wish the results to be in.
 * Specify the number of threads
-* The program requires a minimum of 9GB to run. This is because we have optimized the coverage histogram generation process to accommodate all 15mers in RAM for faster lookup of counts.
+* The program requires a minimum of 5GB to run. This is because we have optimized the coverage histogram generation process to accommodate all 15mers in RAM for faster lookup of counts.
