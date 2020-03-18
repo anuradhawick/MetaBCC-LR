@@ -163,7 +163,7 @@ if resume and "filtering" not in data['completed'] or not resume:
 
 if resume and "dsk" not in data['completed'] or not resume:
     print("Running DSK")
-    cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 5 -out-dir "{0}/DSK" -max-memory {1} -nb-cores {2}""".format(output, max_ram, threads)
+    cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory {1} -nb-cores {2}""".format(output, max_ram, threads)
     o = os.system(cmdDSK)
     checkProc(o, "Running DSK")
 
