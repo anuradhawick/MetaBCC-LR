@@ -70,6 +70,11 @@ optional arguments:
                         the coverage histograms. Usually k-mers are shifted
                         towards y-axis due to errors. By defaul b=10;
                         coverages upto 320X
+  -m <Max memory for DSK in Mb>
+                        Default 5000. DSK k-mer counter accepts a max memory
+                        parameter. However, the complete pipeline requires
+                        5GB+ RAM. This is only to make DSK step faster, should
+                        you have more RAM.                        
   --resume              Continue from the last step or the binning step (which
                         ever comes first). Can save time needed to run DSK and
                         obtain k-mers. Ideal for sensitivity tuning
