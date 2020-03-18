@@ -44,7 +44,9 @@ cd MetaBCC-LR
 ./MetaBCC-LR -h
 
 usage: MetaBCC-LR [-h] -r <READS PATH> [-t <THREADS>] [-i <IDS>]
-                  [-c <No of reads to sample [1% of all reads]>] -o <DEST>
+                  [-c <No of reads to sample>] [-s <Sensitivity>]
+                  [-b <bin width for coverage histograms>] [--resume] -o
+                  <DEST>
 
 MetaBCC-LR Help. A tool developed for binning of metagenomics long reads
 (PacBio/ONT). Tool utilizes composition and coverage profiles of reads based
@@ -56,11 +58,21 @@ optional arguments:
   -r <READS PATH>       Reads path (FASTQ)
   -t <THREADS>          Thread limit
   -i <IDS>              Read ids of reads (For dry runs with ground truth)
-  -c <No of reads to sample [1% of all reads]>
+  -c <No of reads to sample>
                         Number of reads to sample in order to determine the
-                        number of bins. Set to 1% of total reads count by default. Changing this
-                        parameter will affect whether low coverage species are
-                        separated or not.
+                        number of bins. Set to 1% of reads by default.
+                        Changing this parameter will affect whether low
+                        coverage species are separated or not.
+  -s <Sensitivity>      Value between 1 and 10, Higher helps recovering low
+                        abundant species (No. of species > 100)
+  -b <bin width for coverage histograms>
+                        Value of bx32 will be the total coverage of k-mers in
+                        the coverage histograms. Usually k-mers are shifted
+                        towards y-axis due to errors. By defaul b=10;
+                        coverages upto 320X
+  --resume              Continue from the last step or the binning step (which
+                        ever comes first). Can save time needed to run DSK and
+                        obtain k-mers. Ideal for sensitivity tuning
   -o <DEST>             Output directory
 ```
 * Reads path should contain FASTQ reads in the standard FASTQ format.
