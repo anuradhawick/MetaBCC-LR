@@ -2,7 +2,9 @@
 import argparse
 import os
 import sys
+import time
 
+start_time = time.time()
 parser = argparse.ArgumentParser(description="""MetaBCC-LR Help. A tool developed for binning of metagenomics long reads (PacBio/ONT). \
         Tool utilizes composition and coverage profiles of reads based on k-mer frequencies to perform dimension reduction. \
         dimension reduced reads are then clustered using DB-SCAN. Minimum RAM requirement is 9GB.""")
@@ -37,10 +39,24 @@ parser.add_argument('-s',
                     type=int,
                     required=False,
                     default=10)    
-parser.add_argument('-lb',
-                    action='store_true',
-                    help="Value between 1 and 10, Higher helps recovering low abundant species (No. of species > 100)",
-                    )                         
+parser.add_argument('-b',
+                    metavar='<bin width for coverage histograms>',
+                    help="Value of bx32 will be the total coverage of k-mers in the coverage histograms. \
+                        Usually k-mers are shifted towards y-axis due to errors. By defaul b=10; coverages upto 320X",
+                    type=int,
+                    required=False,
+                    default=10)                
+parser.add_argument('-m',
+                    metavar='<Max memory for DSK in Mb>',
+                    help="Default 5000. DSK k-mer counter accepts a max memory parameter. However, the complete pipeline requires 5GB+ RAM. \
+                        This is only to make DSK step faster, should you have more RAM.",
+                    type=int,
+                    required=False,
+                    default=5000)                        
+# parser.add_argument('-lb',
+#                     action='store_true',
+#                     help="Value between 1 and 10, Higher helps recovering low abundant species (No. of species > 100)",
+#                     )                         
 parser.add_argument('--resume',
                     action='store_true',
                     help='Continue from the last step or the binning step (which ever comes first). Can save time needed to run DSK and obtain k-mers. Ideal for sensitivity tuning'
@@ -57,7 +73,23 @@ COUNT = args.c
 sensitivity = args.s
 resume = args.resume
 lengthBias = args.lb
+bin_size = args.bs
+max_ram = max(args.m, 5000)
 checkpointsPath = output + "/checkpoints"
+
+def updateCheckpoints(newChecks):
+    with open(checkpointsPath, "w+") as f:
+        f.write(str(newChecks))
+
+def loadCheckpoints():
+    if not os.path.isfile(checkpointsPath):
+        checkProc(1, "Unable to load checkpoints file")
+    else:
+        with open(checkpointsPath, "r") as f:
+            lines = f.read().strip().split("\n")
+            data = eval(lines[0])
+
+            return data
 
 # Validation of inputs
 if threads <= 0:
@@ -94,34 +126,22 @@ def checkProc(ret, n=None):
 fileType = readsPath.split(".")[-1].lower()
 
 if not resume:
-    with open(checkpointsPath, "w+") as f:
-        data = {}
-        data['r'] = readsPath
-        data['o'] = output
-        data['t'] = threads
-        data['i'] = ids
-        data['c'] = COUNT
-        data['s'] = sensitivity
-        
-        f.write(str(data) + "\n")
+    data = {}
+    data['r'] = readsPath
+    data['o'] = output
+    data['t'] = threads
+    data['i'] = ids
+    data['c'] = COUNT
+    data['s'] = sensitivity
+    data['completed'] = set()
 
-steps_completed = []
-data = {}
+    updateCheckpoints(data)
 
 if resume:
-    if not os.path.isfile(checkpointsPath):
-        checkProc(1, "Unable to load checkpoints file")
-    else:
-        with open(checkpointsPath, "r") as f:
-            lines = f.read().strip().split("\n")
-            data = eval(lines[0])
-            if (data['r'] != readsPath or data['o'] != output or data['i'] != ids):
-                checkProc(1, "Only -t, -c and -s parameters may be altered. Others must be same as before")
-            else:
-                steps_completed = lines[1::]
+    data = loadCheckpoints()
 
 
-if resume and "filtering" not in steps_completed or not resume:
+if resume and "filtering" not in data['completed'] or not resume:
     # convert reads to filtered fasta
     print("Filtering reads")
     if fileType in ['fq', 'fastq']:
@@ -138,12 +158,12 @@ if resume and "filtering" not in steps_completed or not resume:
     o = os.system(cmdFilter)
     checkProc(o, "Filtering reads")
 
-    with open(checkpointsPath, "a") as f:
-        f.write("filtering\n")
+    data['completed'].add('filtering')
+    updateCheckpoints(data)
 
-if resume and "dsk" not in steps_completed or not resume:
+if resume and "dsk" not in data['completed'] or not resume:
     print("Running DSK")
-    cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 10 -out-dir "{0}/DSK" -max-memory 9000 -nb-cores {1}""".format(output, threads)
+    cmdDSK = """dsk -verbose 0 -file "{0}/filteredReads.fa" -kmer-size 15 -abundance-min 5 -out-dir "{0}/DSK" -max-memory {1} -nb-cores {2}""".format(output, max_ram, threads)
     o = os.system(cmdDSK)
     checkProc(o, "Running DSK")
 
@@ -157,10 +177,10 @@ if resume and "dsk" not in steps_completed or not resume:
     o = os.system(cmdGather)
     checkProc(o, "Gathering DSK data")
 
-    with open(checkpointsPath, "a") as f:
-        f.write("dsk\n")
+    data['completed'].add('dsk')
+    updateCheckpoints(data)
 
-if resume and "trimers" not in steps_completed or not resume:
+if resume and "trimers" not in data['completed'] or not resume:
     print("Counting Trimers")
     cmd = """mkdir -p "{0}/profiles" """.format(output)
     o = os.system(cmd)
@@ -170,24 +190,28 @@ if resume and "trimers" not in steps_completed or not resume:
     o = os.system(cmd)
     checkProc(o, "Counting Trimers")
 
-    with open(checkpointsPath, "a") as f:
-        f.write("trimers\n")
+    data['completed'].add('trimers')
+    updateCheckpoints(data)
 
-if resume and "15mers" not in steps_completed or not resume:
+if resume and "15mers" not in data['completed'] or not resume:
     print("Counting 15-mer profiles")
-    cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2}""".format(os.path.dirname(__file__), output, threads)
+    cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2} {3}""".format(os.path.dirname(__file__), output, threads, bin_size)
     o = os.system(cmd)
     checkProc(o, "Counting 15-mer profiles")
 
-    with open(checkpointsPath, "a") as f:
-        f.write("15mers\n")
+    data['completed'].add('15mers')
+    updateCheckpoints(data)
 
-if resume and "sample" not in steps_completed or not resume or resume and data['c'] != COUNT:
+if resume and "read_lengths" not in data['completed'] or not resume:
     print("Obtaining read lengths")
     cmd = """awk "{{ if(NR%2==0) print length($1) }}" "{0}/filteredReads.fa" > "{0}/filteredReadLengths.txt" """.format(output)
     o = os.system(cmd)
     checkProc(o, "Obtaining read lengths")
 
+    data['completed'].add('read_lengths')
+    updateCheckpoints(data)
+
+if resume and "sample" not in data['completed'] or not resume or resume and data['c'] != COUNT:
     print("Sampling Reads")
     if ids:
         cmd = """python {0}/src/sampledata.py -rl "{1}/filteredReadLengths.txt" -p3 {1}/profiles/3mers -p15 {1}/profiles/15mers -c {2} -ids "{1}"/idsFiltered.txt """.format(os.path.dirname(__file__), output, COUNT)
@@ -196,8 +220,10 @@ if resume and "sample" not in steps_completed or not resume or resume and data['
     o = os.system(cmd)
     checkProc(o, "Sampling Reads")
 
-    with open(checkpointsPath, "a") as f:
-        f.write("sample\n")
+
+    data['completed'].add('sample')
+    data['c'] = COUNT
+    updateCheckpoints(data)
 
 print("Binning sampled reads")
 if ids:
@@ -213,3 +239,7 @@ o = os.system(cmd)
 checkProc(o, "Assigning reads")
 
 print("Final Result = '{0}/Binning/final.txt'".format(output))
+elapsed_time = time.time() - start_time
+
+
+print("Total time consumed = ", elapsed_time)

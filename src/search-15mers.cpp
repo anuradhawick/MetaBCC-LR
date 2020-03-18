@@ -44,7 +44,7 @@ vector<long> splitLine(string &line)
     return vec;
 }
 
-long readKmerFile(string filename, vector<long> &kmers)
+long readKmerFile(string filename, vector<u_int32_t> &kmers)
 {
     ifstream myfile(filename);
     string line;
@@ -63,10 +63,10 @@ long readKmerFile(string filename, vector<long> &kmers)
     return count;
 }
 
-double *processLine(string &line, vector<long> &allKmers)
+double *processLine(string &line, vector<u_int32_t> &allKmers, long bin_size = 10)
 {
     double *counts = new double[32];
-    long sum = 0, count, pos, bin_size = 10, len = 0;
+    long sum = 0, count, pos, len = 0;
     u_int64_t val = 0;
 
     // to avoid garbage memory
@@ -121,14 +121,14 @@ double *processLine(string &line, vector<long> &allKmers)
     return counts;
 }
 
-void processLinesBatch(vector<string> &linesBatch, vector<long> &allKmers, string &outputPath, int threads)
+void processLinesBatch(vector<string> &linesBatch, vector<u_int32_t> &allKmers, string &outputPath, int threads, long bin_size = 10)
 {
     vector<double *> batchAnswers(linesBatch.size());
 
     #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
     for (uint i = 0; i < linesBatch.size(); i++)
     {
-        batchAnswers[i] = processLine(linesBatch[i], allKmers);
+        batchAnswers[i] = processLine(linesBatch[i], allKmers, bin_size);
     }
 
     ofstream output;
@@ -160,7 +160,7 @@ void processLinesBatch(vector<string> &linesBatch, vector<long> &allKmers, strin
 
 int main(int argc, char ** argv)
 {
-    vector<long> kmers(1073741824, 0);
+    vector<u_int32_t> kmers(1073741824, 0);    
     vector<string> batch;
     long lineNum = 0, count;
 
@@ -174,14 +174,16 @@ int main(int argc, char ** argv)
 
     string inputPath =  argv[2];
     string outputPath =  argv[3];
+    int bin_size =  max(stoi(argv[4]), 10);
     int threads = 8;
 
     if (argv[4] != NULL) 
-        threads = stoi(argv[4]);
+        threads = stoi(argv[5]);
 
     cout << "INPUT FILE " << inputPath << endl;
     cout << "OUTPUT FILE " << outputPath << endl;
     cout << "THREADS " << threads << endl;
+    cout << "BIN WIDTH " << bin_size << endl;
 
     ifstream myfile(inputPath);
     string line;
@@ -206,7 +208,7 @@ int main(int argc, char ** argv)
 
         if (batch.size() == 100000)
         {
-            processLinesBatch(batch, kmers, outputPath, threads);
+            processLinesBatch(batch, kmers, outputPath, threads, bin_size);
             batch.clear();
         }
     }

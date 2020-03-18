@@ -176,9 +176,9 @@ def scatterPlot(X, Y, title="Untitled", labels=[]):
     fig = plt.figure()
     fig.suptitle(title, fontsize=20)
     if len(labels) == len(X):
-        sns.scatterplot(X, Y, hue=labels, alpha=0.6).plot()
+        sns.scatterplot(X, Y, hue=labels).plot()
     else:
-        sns.scatterplot(X, Y, alpha=0.6).plot()
+        sns.scatterplot(X, Y).plot()
 
     plt.savefig(o + "/" + title + ".eps", dpi=1200, format="eps")
 
