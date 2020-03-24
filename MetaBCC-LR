@@ -72,8 +72,8 @@ ids = args.i
 COUNT = args.c
 sensitivity = args.s
 resume = args.resume
-lengthBias = args.lb
-bin_size = args.bs
+# lengthBias = args.lb
+bin_size = args.b
 max_ram = max(args.m, 5000)
 checkpointsPath = output + "/checkpoints"
 
