@@ -177,7 +177,7 @@ int main(int argc, char ** argv)
     int bin_size =  max(stoi(argv[4]), 10);
     int threads = 8;
 
-    if (argv[4] != NULL) 
+    if (argv[5] != NULL) 
         threads = stoi(argv[5]);
 
     cout << "INPUT FILE " << inputPath << endl;
