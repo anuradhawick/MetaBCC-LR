@@ -195,7 +195,7 @@ if resume and "trimers" not in data['completed'] or not resume:
 
 if resume and "15mers" not in data['completed'] or not resume:
     print("Counting 15-mer profiles")
-    cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2} {3}""".format(os.path.dirname(__file__), output, threads, bin_size)
+    cmd = """"{0}/bin/search15mers" "{1}/DSK/15mersCounts" "{1}/filteredReads.fa" "{1}/profiles/15mers" {2} {3}""".format(os.path.dirname(__file__), output, bin_size, threads)
     o = os.system(cmd)
     checkProc(o, "Counting 15-mer profiles")
 
