@@ -1,9 +1,11 @@
-# MetaBCC-LR
+<p align="center">
+  <img src="MetaBCC-LR_logo.png" width="600" title="Final Labelling" alt="Final Labelling">
+</p>
+
+# MetaBCC-LR: Metagenomics Binning by Coverage and Composition for Long Reads
 
 ![GitHub](https://img.shields.io/github/license/anuradhawick/MetaBCC-LR)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/anuradhawick/MetaBCC-LR)
-
-**MetaBCC-LR**: Metagenomics Binning by Coverage and Composition for Long Reads
 
 ## Dependencies
 MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you will need to install the following python and C++ modules.
