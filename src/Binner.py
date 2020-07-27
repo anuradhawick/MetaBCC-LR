@@ -6,12 +6,16 @@ import sys
 from kneed import KneeLocator
 from sklearn.neighbors import NearestNeighbors
 import argparse
-import seaborn as sns
-import matplotlib.pyplot as plt
 import os
 from random import sample
 from sklearn.metrics.cluster import adjusted_rand_score
 import shutil
+import matplotlib
+
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 parser = argparse.ArgumentParser(description='Identify Initial Bins.')
 
