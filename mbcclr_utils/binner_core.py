@@ -11,49 +11,15 @@ from random import sample
 from sklearn.metrics.cluster import adjusted_rand_score
 import shutil
 import matplotlib
+import logging
+from tabulate import tabulate
 
 matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-parser = argparse.ArgumentParser(description='Identify Initial Bins.')
-
-parser.add_argument('-p3',
-                    help="Path to trimer profiles",
-                    type=str,
-                    required=True)
-parser.add_argument('-p15',
-                    help="Path to 15-mer coverage histogram profiles",
-                    type=str,
-                    required=True)
-parser.add_argument('-ids',
-                    help="Read ids of reads (For dry runs with ground truth)",
-                    type=str,
-                    required=False,
-                    default=None)
-parser.add_argument('-s',
-                    help="Sensitivity for binning",
-                    type=int,
-                    required=False,
-                    default=10)
-parser.add_argument('-o', help="Output directory", type=str, required=True)
-parser.add_argument('-t', help="Threads for DB-SCAN", type=int, required=False, default=8)
-
-args = parser.parse_args()
-
-p3 = args.p3
-p15 = args.p15
-o = args.o
-ids = args.ids
-threads = args.t
-sensitivity = 11 - args.s
-
-if os.path.exists(o):
-    shutil.rmtree(o)
-
-os.makedirs(o)
-
+logger = logging.getLogger('MetaBCC-LR')
 
 class Read:
     def __init__(self, i, p3, p15):
@@ -61,7 +27,6 @@ class Read:
         self.p3 = p3
         self.p15 = p15
         self.embededValue = None
-
 
 class Cluster:
     def __init__(self, name):
@@ -151,67 +116,42 @@ class Cluster:
 
         return np.sum(p)
 
-
-cluster_0 = Cluster("R")
-all_species = []
-# using coverage
-with open(p15) as fp15, open(p3) as fp3:
-    if ids:
-        with open(ids) as fids:
-            for p15line, p3line, idline in zip(fp15, fp3, fids):
-                all_species.append(idline.strip())
-                cluster_0.addRead(
-                    Read(idline.strip(),
-                         list(map(float,
-                                  p3line.strip().split())),
-                         list(map(float,
-                                  p15line.strip().split()))))
-        all_species = list(set(all_species))
-    else:
-        for p15line, p3line in zip(fp15, fp3):
-            cluster_0.addRead(
-                Read("read", list(map(float,
-                                      p3line.strip().split())),
-                     list(map(float,
-                              p15line.strip().split()))))
-
-
-def scatterPlot(X, Y, title="Untitled", labels=[]):
-    fig = plt.figure()
+def plot_cluster(X, Y, title, labels, output):
+    fig = plt.figure(figsize=(10, 10))
     fig.suptitle(title, fontsize=20)
+
     if len(labels) == len(X):
         sns.scatterplot(X, Y, hue=labels).plot()
     else:
         sns.scatterplot(X, Y).plot()
 
-    plt.savefig(o + "/" + title + ".eps", dpi=1200, format="eps")
+    plt.savefig(f"{output}/images/{title}.png", dpi=200, format="png")
+    plt.close()
 
-
-def estimateEpsilon(X_embedded, plot=False):
+def estimate_epsilon(X_embedded, sensitivity, plot=False):
     neigh = NearestNeighbors(n_neighbors=2)
     nbrs = neigh.fit(X_embedded)
     distances, indices = nbrs.kneighbors(X_embedded)
-
     distances = np.sort(distances, axis=0)
     distances = distances[int(distances.shape[0]/2):, 1]
     i = np.arange(distances.shape[0])
 
     # get the elbow
     kneedle = KneeLocator(i,
-                          distances,
-                          S=1.0,
-                          curve='convex',
-                          direction='increasing',
-                          interp_method='polynomial')
-                
+                        distances,
+                        S=1.0,
+                        curve='convex',
+                        direction='increasing',
+                        interp_method='polynomial')
+
     if plot:
         plt.figure()
         plt.plot(distances)
         kneedle.plot_knee_normalized()
+
     return sensitivity * distances[kneedle.knee]
 
-
-def evaluateClusters(clusters, species):
+def evaluate_clusters(clusters, species):
     all_clusters = list(clusters.keys())
     all_species = species
 
@@ -249,19 +189,17 @@ def evaluateClusters(clusters, species):
     for x in matT:
         cMax += max(x)
 
-    print("\n")
-    print(all_clusters)
-    print("\n")
-    for x in range(len(mat)):
-        print(all_species[x], " " * (30-len(all_species[x])), " ".join(list(map(lambda x: " " * (20- len(str(x))) + str(x),mat[x]))))
+    for n, s in enumerate(all_species):
+        mat[n] = [s] + mat[n]
 
-    print("Total reads = ", tot)
-    print("\nPrecision ", rMax / tot)
-    print("Recall ", cMax / tot)
-    print("ARI ", adjusted_rand_score(truth, labels))
+    logger.info("\n" + tabulate(mat, headers=[""] + [c for c in all_clusters], tablefmt="fancy_grid"))
 
+    logger.info(f"Total reads  {tot:15}")
+    logger.info(f"Precision    {rMax / tot:15.3f}")
+    logger.info(f"Recall       {cMax / tot:15.3f}")
+    logger.info(f"ARI          {adjusted_rand_score(truth, labels):15.3f}")
 
-def clusterReads(cluster, t, sample=False, plot=False):
+def cluster_reads(cluster, t, sensitivity, threads, output, ground_truth, sample=False, plot=False):
     if len(cluster.reads) < 200:
         return {cluster.name + "-N": cluster}
     elif len(cluster.reads) > 2000 and sample:
@@ -276,30 +214,31 @@ def clusterReads(cluster, t, sample=False, plot=False):
         else:
             embeddedRoot = cluster.embedP15()
     
-    clustering = DBSCAN(eps=estimateEpsilon(embeddedRoot), n_jobs=threads).fit(embeddedRoot)
+    clustering = DBSCAN(eps=estimate_epsilon(embeddedRoot, sensitivity), n_jobs=threads).fit(embeddedRoot)
     if t == "composition":
-        labels = list(map(lambda x: cluster.name + "-c-" + str(x), list(clustering.labels_)))
+        labels = list(map(lambda x: f"{cluster.name}-c-{x+1}", list(clustering.labels_)))
     else:
-        labels = list(map(lambda x: cluster.name + "-x-" + str(x), list(clustering.labels_)))
+        labels = list(map(lambda x: f"{cluster.name}-x-{x+1}", list(clustering.labels_)))
 
     if plot:
-        scatterPlot(embeddedRoot[:, 0],
+        plot_cluster(embeddedRoot[:, 0],
                     embeddedRoot[:, 1],
-                    title="Separation by " + t  + " " + cluster.name,
-                    labels=labels)
+                    "Separation by " + t  + " " + cluster.name,
+                    labels, output)
     label_set = list(set(labels))
 
-    if ids:
+    if ground_truth is not None:
         if sample and len(cluster.reads) > 2000:
             reads = cluster.sampledReads
         else:
             reads = cluster.reads
         labels1 = list(map(lambda r: r.i, reads))
         if plot:
-            scatterPlot(embeddedRoot[:, 0],
+            plot_cluster(embeddedRoot[:, 0],
                         embeddedRoot[:, 1],
-                        title="Separation by " + t + " Truth " + cluster.name,
-                        labels=labels1)
+                        "Separation by " + t + " Truth " + cluster.name,
+                        labels1, output)
+
     if sample and len(cluster.reads) > 2000:
         reads = cluster.sampledReads
     else:
@@ -337,53 +276,81 @@ def clusterReads(cluster, t, sample=False, plot=False):
         return new_clustersAllReads
     return new_clusters
 
-stats = open(o + "/cluster-stats.txt", "w+")
-
-clx = clusterReads(cluster_0, "coverage", False, True)
-
-# for each cov cluster cluster by composition
-print("\n")
-cly = {}
-
-def clusterByComposition(cluster):
-    r1 = clusterReads(cluster, "composition", True, True)
+def cluster_composition(cluster, sensitivity, threads, output, ground_truth):
+    r1 = cluster_reads(cluster, "composition", sensitivity, threads, output, ground_truth, True, True)
     result = {}
 
     if len(r1) > 1:
         for cn, c2 in r1.items():
-            r2 = clusterByComposition(c2)
+            r2 = cluster_composition(c2, sensitivity, threads, output, ground_truth)
             result.update(r2)
     else:
         result.update(r1)
     
     return result
 
-for cn, c in clx.items():
-    t = clusterByComposition(c)
-        
-    cly.update(t)
+def run_binner(output, ground_truth, threads, sensitivity):
+    sensitivity = 11 - sensitivity
+    p3 = np.load(f"{output}/profiles/3mers_sampled.npy")
+    p15 = np.load(f"{output}/profiles/15mers_sampled.npy")
+    output_binning = f"{output}/misc/"
+    
+    if ground_truth is not None:
+        ground_truth = np.load(f"{output}/misc/filtered_truth_sampled.npy")
 
-    for cn2, cc in t.items():
-        stats.write(cn2)
-        stats.write("\n")
-        stats.write(" ".join(list(map(str, c.getMeanP15()))))
-        stats.write("\n")
-        stats.write(" ".join(list(map(str, cc.getMeanP3()))))
-        stats.write("\n")
-        stats.write(" ".join(list(map(str, c.getStdP15()))))
-        stats.write("\n")
-        stats.write(" ".join(list(map(str, cc.getStdP3()))))
-        stats.write("\n")
+    cluster_init = Cluster("Root")
+    all_species = []
 
-if sensitivity < 8:
-    # discarding poor bins
-    for k in list(cly.keys()):
-        if len(cly[k].reads) < 100:
-            del cly[k]
+    if ground_truth is not None:
+        for p3_row, p15_row, truth_read in zip(p3, p15, ground_truth):
+            all_species.append(truth_read)
+            cluster_init.addRead(Read(truth_read, p3_row, p15_row))
+        all_species = list(set(all_species))
+    else:
+        for p3_row, p15_row in zip(p3, p15):
+            cluster_init.addRead(Read(0, p3_row, p15_row))
 
-stats.close()
+    stats = open(f"{output_binning}/cluster-stats.txt", "w+")
 
-if ids:
-    evaluateClusters(cly, all_species)
+    logger.debug("Clustering using coverage")
+    clx = cluster_reads(cluster_init, "coverage", sensitivity, threads, output, ground_truth, False, True)
+    logger.debug(f"Identified number of coverage clusters - {len(clx)}")
 
+    # for each cov cluster cluster by composition
+    logger.debug("Clustering using composition")
+    cly = {}
+    bin_name = 1
+    final_binning_result = {}
 
+    for cn, c in clx.items():
+        t = cluster_composition(c, sensitivity, threads, output, ground_truth)
+            
+        cly.update(t)
+
+        for cn2, cc in t.items():
+            stats.write(f"Bin-{bin_name}")
+            final_binning_result[f"Bin-{bin_name}"] = cc
+            stats.write("\n")
+            stats.write(" ".join(list(map(str, c.getMeanP15()))))
+            stats.write("\n")
+            stats.write(" ".join(list(map(str, cc.getMeanP3()))))
+            stats.write("\n")
+            stats.write(" ".join(list(map(str, c.getStdP15()))))
+            stats.write("\n")
+            stats.write(" ".join(list(map(str, cc.getStdP3()))))
+            stats.write("\n")
+            bin_name+=1
+    
+    logger.debug(f"Identified number of coverage and composition clusters - {len(cly)}")
+
+    if sensitivity < 8:
+        logger.debug(f"Discarding small clusters")
+        # discarding poor bins
+        for k in list(cly.keys()):
+            if len(cly[k].reads) < 100:
+                del cly[k]
+
+    stats.close()
+
+    if ground_truth is not None:
+        evaluate_clusters(final_binning_result, all_species)
