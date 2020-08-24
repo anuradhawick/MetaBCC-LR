@@ -16,6 +16,7 @@ MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you
 * kneed 0.4.2
 * seaborn 0.9.0
 * h5py 2.9.0
+* tabulate 0.8.7
 
 ### C++ requirements
 * GCC version 9.1.0
@@ -33,10 +34,20 @@ git clone https://github.com/anuradhawick/MetaBCC-LR.git
 ```
 
 ## Compiling the source code
+* Build the binaries
 ```
 cd MetaBCC-LR
-./build.sh
+python setup.py build
 ```
+OR
+```
+sh build.sh
+```    
+* To install the program 
+```
+pip install .
+```
+OR add the program path to your $PATH variable.
 
 ## Running the MetaBCC-LR
 In order to run MetaBCC-LR you are required to provide the reads in FASTQ format (Only format supported in current version).
@@ -45,10 +56,11 @@ In order to run MetaBCC-LR you are required to provide the reads in FASTQ format
 cd MetaBCC-LR
 ./MetaBCC-LR -h
 
-usage: MetaBCC-LR [-h] -r <READS PATH> [-t <THREADS>] [-i <IDS>]
-                  [-c <No of reads to sample>] [-s <Sensitivity>]
-                  [-b <bin width for coverage histograms>] [--resume] -o
-                  <DEST>
+usage: MetaBCC-LR [-h] --reads-path READS_PATH [--threads THREADS]
+                  [--ground-truth GROUND_TRUTH] [--sample-count SAMPLE_COUNT]
+                  [--sensitivity SENSITIVITY] [--bin-size BIN_SIZE]
+                  [--max-memory MAX_MEMORY] [--resume] --output <DEST>
+                  [--version]
 
 MetaBCC-LR Help. A tool developed for binning of metagenomics long reads
 (PacBio/ONT). Tool utilizes composition and coverage profiles of reads based
@@ -57,32 +69,38 @@ are then clustered using DB-SCAN. Minimum RAM requirement is 9GB.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -r <READS PATH>       Reads path (FASTQ)
-  -t <THREADS>          Thread limit
-  -i <IDS>              Read ids of reads (For dry runs with ground truth)
-  -c <No of reads to sample>
+  --reads-path READS_PATH, -r READS_PATH
+                        Reads path for binning
+  --threads THREADS, -t THREADS
+                        Thread count for computation
+  --ground-truth GROUND_TRUTH, -g GROUND_TRUTH
+                        Ground truth of reads for dry runs and sensitivity
+                        tuning
+  --sample-count SAMPLE_COUNT, -c SAMPLE_COUNT
                         Number of reads to sample in order to determine the
                         number of bins. Set to 1% of reads by default.
                         Changing this parameter will affect whether low
                         coverage species are separated or not.
-  -s <Sensitivity>      Value between 1 and 10, Higher helps recovering low
+  --sensitivity SENSITIVITY, -s SENSITIVITY
+                        Value between 1 and 10, Higher helps recovering low
                         abundant species (No. of species > 100)
-  -b <bin width for coverage histograms>
+  --bin-size BIN_SIZE, -b BIN_SIZE
                         Value of bx32 will be the total coverage of k-mers in
                         the coverage histograms. Usually k-mers are shifted
                         towards y-axis due to errors. By defaul b=10;
                         coverages upto 320X
-  -m <Max memory for DSK in Mb>
+  --max-memory MAX_MEMORY, -m MAX_MEMORY
                         Default 5000. DSK k-mer counter accepts a max memory
                         parameter. However, the complete pipeline requires
                         5GB+ RAM. This is only to make DSK step faster, should
-                        you have more RAM.                        
+                        you have more RAM.
   --resume              Continue from the last step or the binning step (which
                         ever comes first). Can save time needed to run DSK and
                         obtain k-mers. Ideal for sensitivity tuning
-  -o <DEST>             Output directory
+  --output <DEST>, -o <DEST>
+                        Output directory
+  --version, -v         Show version.
 ```
-* Reads path should contain FASTQ reads in the standard FASTQ format.
 * Output path is the foldername that you wish the results to be in.
 * Specify the number of threads
 * The program requires a minimum of 5GB to run. This is because we have optimized the coverage histogram generation process to accommodate all 15mers in RAM for faster lookup of counts.
