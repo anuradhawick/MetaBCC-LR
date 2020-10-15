@@ -50,7 +50,7 @@ pip install .
 OR add the program path to your $PATH variable.
 
 ## Running the MetaBCC-LR
-In order to run MetaBCC-LR you are required to provide the reads in FASTQ format (Only format supported in current version).
+In order to run MetaBCC-LR you are required to provide the reads in FASTQ or FASTA format.
 
 ```
 cd MetaBCC-LR
