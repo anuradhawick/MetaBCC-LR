@@ -4,7 +4,7 @@ import setuptools
 import subprocess
 from distutils.command.build import build
 from setuptools.command.install import install as SetuptoolsInstall
-import os
+import sys
 import platform
 
 with open("README.md", "r") as fh:
