@@ -17,14 +17,17 @@ MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you
 * seaborn 0.9.0
 * h5py 2.9.0
 * tabulate 0.8.7
+* umap-learn 0.5.1
+* song-vis (latest version from github)
 
 ### C++ requirements
 * GCC version 9.1.0
 * OpenMP 4.5 for multi processing
+* PThreads (any version should work)
 
-### Third party programs
+<!-- ### Third party programs
 * DSK: https://github.com/GATB/dsk
-    * Add DSK binaries to your PATH variable
+    * Add DSK binaries to your PATH variable -->
 
 ## Downloading MetaBCC-LR
 To download MetaBCC-LR, you have to clone the MetaBCC-LR repository to your machine.
@@ -50,17 +53,28 @@ pip install .
 OR add the program path to your $PATH variable.
 
 ## Running the MetaBCC-LR
+
+### Test run data
+
+Extract test data from [here](https://anu365-my.sharepoint.com/:f:/g/personal/u6776114_anu_edu_au/EnV-rUq01pRHl1lH4Y8SaSwBwVVMKNAptbA6YW8RWX6Pqw?e=tDgy9v);
+
 In order to run MetaBCC-LR you are required to provide the reads in FASTQ or FASTA format.
 
 ```
-cd MetaBCC-LR
-./MetaBCC-LR -h
+python mbcclr --resume -r test_data/data/reads.fasta -g test_data/data/ids.txt -o test_output -e umap -c 25000 -bs 10 -bc 10 -k 4
+```
 
-usage: MetaBCC-LR [-h] --reads-path READS_PATH [--threads THREADS]
-                  [--ground-truth GROUND_TRUTH] [--sample-count SAMPLE_COUNT]
-                  [--sensitivity SENSITIVITY] [--bin-size BIN_SIZE]
-                  [--max-memory MAX_MEMORY] [--resume] --output <DEST>
-                  [--version]
+### Usage and Help
+```
+cd MetaBCC-LR
+./mbcclr -h
+
+usage: mbcclr [-h] --reads-path READS_PATH [--embedding {tsne,umap,song}]
+              [--k-size {3,4,5,6,7}] [--sample-count SAMPLE_COUNT]
+              [--sensitivity SENSITIVITY] [--bin-size BIN_SIZE]
+              [--bin-count BIN_COUNT] [--threads THREADS]
+              [--ground-truth GROUND_TRUTH] [--resume] --output OUTPUT
+              [--version]
 
 MetaBCC-LR Help. A tool developed for binning of metagenomics long reads
 (PacBio/ONT). Tool utilizes composition and coverage profiles of reads based
@@ -71,11 +85,10 @@ optional arguments:
   -h, --help            show this help message and exit
   --reads-path READS_PATH, -r READS_PATH
                         Reads path for binning
-  --threads THREADS, -t THREADS
-                        Thread count for computation
-  --ground-truth GROUND_TRUTH, -g GROUND_TRUTH
-                        Ground truth of reads for dry runs and sensitivity
-                        tuning
+  --embedding {tsne,umap,song}, -e {tsne,umap,song}
+                        Embedding tool to be used for clustering
+  --k-size {3,4,5,6,7}, -k {3,4,5,6,7}
+                        Choice of k-mer for oligonucleotide frequency vector.
   --sample-count SAMPLE_COUNT, -c SAMPLE_COUNT
                         Number of reads to sample in order to determine the
                         number of bins. Set to 1% of reads by default.
@@ -84,23 +97,23 @@ optional arguments:
   --sensitivity SENSITIVITY, -s SENSITIVITY
                         Value between 1 and 10, Higher helps recovering low
                         abundant species (No. of species > 100)
-  --bin-size BIN_SIZE, -b BIN_SIZE
-                        Value of bx32 will be the total coverage of k-mers in
-                        the coverage histograms. Usually k-mers are shifted
-                        towards y-axis due to errors. By defaul b=10;
-                        coverages upto 320X
-  --max-memory MAX_MEMORY, -m MAX_MEMORY
-                        Default 5000. DSK k-mer counter accepts a max memory
-                        parameter. However, the complete pipeline requires
-                        5GB+ RAM. This is only to make DSK step faster, should
-                        you have more RAM.
+  --bin-size BIN_SIZE, -bs BIN_SIZE
+                        Size of each bin in coverage histogram.
+  --bin-count BIN_COUNT, -bc BIN_COUNT
+                        Number of bins in the coverage histogram.
+  --threads THREADS, -t THREADS
+                        Thread count for computation
+  --ground-truth GROUND_TRUTH, -g GROUND_TRUTH
+                        Ground truth of reads for dry runs and sensitivity
+                        tuning
   --resume              Continue from the last step or the binning step (which
                         ever comes first). Can save time needed to run DSK and
                         obtain k-mers. Ideal for sensitivity tuning
-  --output <DEST>, -o <DEST>
+  --output OUTPUT, -o OUTPUT
                         Output directory
   --version, -v         Show version.
 ```
+
 * Output path is the foldername that you wish the results to be in.
 * Specify the number of threads
 * The program requires a minimum of 5GB to run. This is because we have optimized the coverage histogram generation process to accommodate all 15mers in RAM for faster lookup of counts.
@@ -130,3 +143,7 @@ optional arguments:
 Program can be built and installed with `sh build` and `pip install .` 
 We recommend using `sh build` and using the program without installing. Thus making it easier to fetch future upadates and run.
 
+## New in v-2.0
+
+* No need to have DSK, we have implemented a consice k-mer counting strategy using compare and swap (CAS).
+* Supports UMAP and SONG embeddings. Please note that UMAP and SONG are still being improved. Needs more work from our side. But usable!
