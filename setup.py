@@ -5,6 +5,7 @@ import subprocess
 from distutils.command.build import build
 from setuptools.command.install import install as SetuptoolsInstall
 import os
+import platform
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -12,7 +13,14 @@ with open("README.md", "r") as fh:
 class SHBuild(build):
     def run(self):
         try:
-            subprocess.check_call(["sh", "build.sh"])
+            if "Linux" in platform.platform():
+                subprocess.check_call(["sh", "build.sh"])
+            elif 'Darwin' in platform.platform():
+                subprocess.check_call(["sh", "build.sh", "macos"])
+            else:
+                # TODO what issues might raise in windows?
+                # Will wait until somebody face one!
+                subprocess.check_call(["sh", "build.sh"])
         except subprocess.CalledProcessError as e:
             sys.exit("Compilation error: ", e)    
 
@@ -26,8 +34,8 @@ package_data = {
 data_files = [(".", ["LICENSE", "README.md"])]
 
 setuptools.setup(
-    name="MetaBCC-LR", # Replace with your own username
-    version="1.0.0",
+    name="MetaBCC-LR",
+    version="1.1.0",
     zip_safe=True,
     author="Anuradha Wickramarachchi",
     author_email="anuradhawick@gmail.com",
@@ -39,7 +47,7 @@ setuptools.setup(
     package_data=package_data,
     data_files=data_files,
     include_package_data=True,
-    scripts=['MetaBCC-LR'],
+    scripts=['mbcclr'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         "Programming Language :: Python :: 3",
