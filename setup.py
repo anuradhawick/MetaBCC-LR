@@ -35,7 +35,7 @@ data_files = [(".", ["LICENSE", "README.md"])]
 
 setuptools.setup(
     name="MetaBCC-LR",
-    version="1.1.0",
+    version="2.0",
     zip_safe=True,
     author="Anuradha Wickramarachchi",
     author_email="anuradhawick@gmail.com",
