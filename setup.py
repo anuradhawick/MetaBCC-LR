@@ -62,6 +62,8 @@ setuptools.setup(
         "kneed",
         "tabulate",
         "seaborn",
+        "umap-learn",
+        "song-vis",
         "setuptools"],
     python_requires='>=3.6',
     cmdclass={  'build': SHBuild }
