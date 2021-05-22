@@ -6,7 +6,7 @@ mkdir mbcclr_utils/bin
 case $1 in
 
   osx | macos)
-    echo -n "OSX Build"
+    echo "OSX Build"
     # OSX Build (modify the include path to suit you; you might need to run brew install libomp or brew install llvm)
     echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
     clang++ mbcclr_utils/search-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -I/usr/local/include -L/usr/local/lib
@@ -19,7 +19,7 @@ case $1 in
     ;;
 
   *)
-    echo -n "Linux Build"
+    echo "Linux Build"
     # Linux
     echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
     g++ mbcclr_utils/search-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers
