@@ -3,21 +3,32 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <thread>
+#include <mutex>
+#include <queue>
+#include <condition_variable>
+#include "io_utils.h"
 
 using namespace std;
 
-u_int64_t revComp(u_int64_t x, size_t sizeKmer=15)
+queue<string> reads_queue;
+mutex mux;
+condition_variable condition;
+volatile bool terminate_threads;
+
+u_int64_t revComp(u_int64_t x, size_t sizeKmer = 15)
 {
     u_int64_t res = x;
 
-    res = ((res>> 2 & 0x3333333333333333) | (res & 0x3333333333333333) <<  2);
-    res = ((res>> 4 & 0x0F0F0F0F0F0F0F0F) | (res & 0x0F0F0F0F0F0F0F0F) <<  4);
-    res = ((res>> 8 & 0x00FF00FF00FF00FF) | (res & 0x00FF00FF00FF00FF) <<  8);
-    res = ((res>>16 & 0x0000FFFF0000FFFF) | (res & 0x0000FFFF0000FFFF) << 16);
-    res = ((res>>32 & 0x00000000FFFFFFFF) | (res & 0x00000000FFFFFFFF) << 32);
+    res = ((res >> 2 & 0x3333333333333333) | (res & 0x3333333333333333) << 2);
+    res = ((res >> 4 & 0x0F0F0F0F0F0F0F0F) | (res & 0x0F0F0F0F0F0F0F0F) << 4);
+    res = ((res >> 8 & 0x00FF00FF00FF00FF) | (res & 0x00FF00FF00FF00FF) << 8);
+    res = ((res >> 16 & 0x0000FFFF0000FFFF) | (res & 0x0000FFFF0000FFFF) << 16);
+    res = ((res >> 32 & 0x00000000FFFFFFFF) | (res & 0x00000000FFFFFFFF) << 32);
     res = res ^ 0xAAAAAAAAAAAAAAAA;
 
-    return (res >> (2*( 32 - sizeKmer))) ;
+    return (res >> (2 * (32 - sizeKmer)));
 }
 
 vector<long> splitLine(string &line)
@@ -44,33 +55,29 @@ vector<long> splitLine(string &line)
     return vec;
 }
 
-long readKmerFile(string filename, vector<u_int32_t> &kmers)
+vector<atomic<u_int32_t>> readKmerFile(string filename)
 {
-    ifstream myfile(filename);
-    string line;
-    vector<long> v;
-    long count = 0;
-    while (getline(myfile, line))
-    {
-        v = splitLine(line);
-        kmers[v[0]] = v[1];
-        kmers[revComp(v[0])] = v[1];
-        count ++;
-    }
+    ifstream input;
+    u_int64_t size;
+    input.open(filename);
 
-    myfile.close();
+    input.read(reinterpret_cast<char *>(&size), sizeof(size));
+    vector<atomic<u_int32_t>> kmers(size);
 
-    return count;
+    input.read(reinterpret_cast<char *>(kmers.data()), kmers.size() * sizeof(kmers[0]));
+    input.close();
+
+    return kmers;
 }
 
-double *processLine(string &line, vector<u_int32_t> &allKmers, long bin_size = 10)
+double *processLine(string &line, vector<atomic<u_int32_t>> &allKmers, long bin_size, int bins)
 {
-    double *counts = new double[32];
+    double *counts = new double[bins];
     long sum = 0, count, pos, len = 0;
     u_int64_t val = 0;
 
     // to avoid garbage memory
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < bins; i++)
     {
         counts[i] = 0;
     }
@@ -92,56 +99,63 @@ double *processLine(string &line, vector<u_int32_t> &allKmers, long bin_size = 1
         if (len == 15)
         {
             // use val as the kmer for counting
-            len--;  
+            len--;
             count = allKmers[(long)val];
+            count = count < 2 ? 0: count;
             pos = (count / bin_size) - 1;
 
             if (count <= bin_size)
             {
                 counts[0]++;
-                
             }
-            else if (pos < 32 && pos > 0)
+            else if (pos < bins && pos > 0)
             {
                 counts[pos]++;
             }
-            sum++;          
+            else
+            {
+                counts[bins - 1]++;
+            }
+            sum++;
         }
     }
 
-    for (int i = 0; i < 32; i++)
+    if (sum > 0)
     {
-        counts[i] /= sum;
-        if (counts[i] <  1e-4)
+        for (int i = 0; i < bins; i++)
         {
-            counts[i] = 0;
+            counts[i] /= sum;
+            if (counts[i] < 1e-4)
+            {
+                counts[i] = 0;
+            }
         }
     }
 
     return counts;
 }
 
-void processLinesBatch(vector<string> &linesBatch, vector<u_int32_t> &allKmers, string &outputPath, int threads, long bin_size = 10)
+void processLinesBatch(vector<string> &linesBatch, vector<atomic<u_int32_t>> &allKmers, string &output_path, int threads, long bin_size, int bins)
 {
     vector<double *> batchAnswers(linesBatch.size());
 
-    #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
     for (uint i = 0; i < linesBatch.size(); i++)
     {
-        batchAnswers[i] = processLine(linesBatch[i], allKmers, bin_size);
+        batchAnswers[i] = processLine(linesBatch[i], allKmers, bin_size, bins);
     }
 
     ofstream output;
-    output.open(outputPath, ios::out | ios::app);
+    output.open(output_path, ios::out | ios::app);
     string results = "";
 
     for (uint i = 0; i < linesBatch.size(); i++)
     {
-        for (int j = 0; j < 32; j++)
+        for (int j = 0; j < bins; j++)
         {
             results += to_string(batchAnswers[i][j]);
 
-            if (j < 32 - 1)
+            if (j < bins - 1)
             {
                 results += " ";
             }
@@ -158,68 +172,101 @@ void processLinesBatch(vector<string> &linesBatch, vector<u_int32_t> &allKmers, 
     output.close();
 }
 
-int main(int argc, char ** argv)
+void off_load_process(string &output, vector<atomic<u_int32_t>> &all_kmers, int &threads, long bin_size, int bins)
 {
-    vector<u_int32_t> kmers(1073741824, 0);    
+    string seq;
     vector<string> batch;
-    long lineNum = 0, count;
 
-    string kmersFile =  argv[1];
-    cout << "K-Mer file " << kmersFile << endl;
-
-    cout << "LOADING KMERS TO RAM" << endl;
-    count = readKmerFile(kmersFile, kmers);
-
-    cout << "FINISHED LOADING KMERS TO RAM " << count << endl;
-
-    string inputPath =  argv[2];
-    string outputPath =  argv[3];
-    int bin_size =  max(stoi(argv[4]), 10);
-    int threads = 8;
-
-    if (argv[5] != NULL) 
-        threads = stoi(argv[5]);
-
-    cout << "INPUT FILE " << inputPath << endl;
-    cout << "OUTPUT FILE " << outputPath << endl;
-    cout << "THREADS " << threads << endl;
-    cout << "BIN WIDTH " << bin_size << endl;
-
-    ifstream myfile(inputPath);
-    string line;
-
-    ofstream output;
-    output.open(outputPath, ios::out);
-    output.close();
-
-    while (getline(myfile, line))
+    while (true)
     {
-        if (lineNum % 2 != 1)
         {
-            lineNum++;
-            continue;
-        }
-        else
-        {
-            batch.push_back(line);
+            unique_lock<mutex> lock(mux);
+
+            while (reads_queue.size() > 0)
+            {
+                seq = reads_queue.front();
+                batch.push_back(seq);
+                reads_queue.pop();
+
+                if (batch.size() == 1000)
+                {
+                    break;
+                }
+            }
         }
 
-        lineNum++;
+        condition.notify_all();
 
-        if (batch.size() == 100000)
+        if (batch.size() > 0)
         {
-            processLinesBatch(batch, kmers, outputPath, threads, bin_size);
+            processLinesBatch(batch, all_kmers, output, threads, bin_size, bins);
             batch.clear();
         }
-    }
-    processLinesBatch(batch, kmers, outputPath, threads);
 
-    myfile.close();
-    batch.clear();
+        {
+            unique_lock<mutex> lock(mux);
+            if (terminate_threads && reads_queue.size() == 0)
+            {
+                break;
+            }
+        }
+    }
+}
+
+void io_thread(string &file_path)
+{
+    SeqReader reader(file_path);
+    Seq seq;
+    int count = 0;
+
+    while (reader.get_seq(seq))
+    {
+        {
+            unique_lock<mutex> lock(mux);
+            condition.wait(lock, [] { return reads_queue.size() < 10000; });
+            reads_queue.push(seq.data);
+        }
+        count++;
+        cout << "Loaded Reads " << count << "       \r" << flush;
+    }
+
+    cout << endl;
+
+    terminate_threads = true;
+}
+
+int main(int argc, char **argv)
+{
+    vector<string> batch;
+    string kmers_file = argv[1];
+    cout << "K-Mer file " << kmers_file << endl;
+
+    cout << "LOADING KMERS TO RAM" << endl;
+    vector<atomic<u_int32_t>> kmers = readKmerFile(kmers_file);
+
+    cout << "FINISHED LOADING KMERS TO RAM " << endl;
+
+    string input_path = argv[2];
+    string output_path = argv[3];
+    int bin_size = stoi(argv[4]);
+    int bins = stoi(argv[5]);
+    int threads = stoi(argv[6]);
+
+    cout << "INPUT FILE " << input_path << endl;
+    cout << "OUTPUT FILE " << output_path << endl;
+    cout << "THREADS " << threads << endl;
+    cout << "BIN WIDTH " << bin_size << endl;
+    cout << "BINS IN HIST " << bins << endl;
+
+    thread iot(io_thread, ref(input_path));
+    thread process(off_load_process, ref(output_path), ref(kmers), ref(threads), ref(bin_size), ref(bins));
+
+    iot.join();
+    process.join();
 
     kmers.clear();
 
-    cout << "COMPLETED : Output at - " << outputPath << endl;
+    cout << "COMPLETED : Output at - " << output_path << endl;
 
     return 0;
 }
