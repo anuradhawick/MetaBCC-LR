@@ -105,7 +105,7 @@ void processLinesBatch(vector<string> &batch, vector<atomic<u_int32_t>> &all_kme
     vector<vector<u_int64_t>> batch_results(batch.size());
 
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
-    for (uint i = 0; i < batch.size(); i++)
+    for (size_t i = 0; i < batch.size(); i++)
     {
         processLine(batch[i], all_kmers);
     }

@@ -38,29 +38,38 @@ def run_filter(reads_path, output, ids=None):
     output_fasta_file.close()
     
 def run_assign(output, threads):
-    cmd = f"""{os.path.dirname(__file__)}/bin/assign "{output}/profiles/3mers" "{output}/profiles/15mers" "{output}/misc/cluster-stats.txt" {threads} {output}/misc/final.txt """
+    cmd = f"""{os.path.dirname(__file__)}/bin/assign "{output}/profiles/3mers" "{output}/profiles/15mers" "{output}/misc/cluster-stats.txt" {threads} {output}/final.txt """
     o = os.system(cmd)
     check_proc(o, "Assigning reads")    
 
-def run_3mers(output, threads):
+def run_kmers(reads_path, output, k_size, threads):
     if not os.path.isdir(f"{output}/profiles"):
         os.makedirs(f"{output}/profiles")
 
-    cmd = f""""{os.path.dirname(__file__)}/bin/countTrimers" "{output}/misc/filtered_reads.fasta" "{output}/profiles/3mers" {threads}"""
+    cmd = f""""{os.path.dirname(__file__)}/bin/count-kmers" "{reads_path}" "{output}/profiles/3mers" {k_size} {threads}"""
+    logger.debug("CMD::" + cmd)
     o = os.system(cmd)
     check_proc(o, "Counting Trimers")
 
-def run_15mers(output, bin_size, threads):
+def run_15mers(reads_path, output, bin_size, bins, threads):
     if not os.path.isdir(f"{output}/profiles"):
         os.makedirs(f"{output}/profiles")
 
-    cmd = f""""{os.path.dirname(__file__)}/bin/search15mers" "{output}/misc/DSK/15mersCounts" "{output}/misc/filtered_reads.fasta" "{output}/profiles/15mers" {bin_size} {threads}"""
+    cmd = f""""{os.path.dirname(__file__)}/bin/count-15mers" "{reads_path}" "{output}/profiles/15mers-counts" {threads}"""
+    logger.debug("CMD::" + cmd)
+    o = os.system(cmd)
+    check_proc(o, "Counting 15-mers")
+    
+    cmd = f""""{os.path.dirname(__file__)}/bin/search-15mers" "{output}/profiles/15mers-counts" "{reads_path}" "{output}/profiles/15mers" {bin_size} {bins} {threads}"""
+    logger.debug("CMD::" + cmd)
     o = os.system(cmd)
     check_proc(o, "Counting 15-mer profiles")
 
+# depprecated
 def run_dsk(output, max_memory, threads):
     logger.debug("Running DSK")
     cmdDSK = f"""dsk -verbose 0 -file "{output}/misc/filtered_reads.fasta" -kmer-size 15 -abundance-min 10 -out-dir "{output}/misc/DSK" -max-memory {max_memory} -nb-cores {threads}"""
+    logger.debug("CMD::" + cmdDSK)
     o = os.system(cmdDSK)
     check_proc(o, "Running DSK")
     scan_dsk.scan_dsk(f"{output}/misc/DSK/filtered_reads.h5", threads, f"{output}/misc/DSK/")

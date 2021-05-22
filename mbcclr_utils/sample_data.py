@@ -1,6 +1,4 @@
-import sys
 import random
-import argparse
 import numpy as np
 import logging
 
@@ -14,7 +12,7 @@ def sample(output, sample_count, ground_truth):
     logger.debug(f"15mer data shape {str(p15_data.shape)}")
 
     if ground_truth is not None:
-        ground_truth = np.loadtxt(f"./{output}/misc/filtered_truth.txt", dtype=str)
+        ground_truth = np.array(open(ground_truth).read().strip().split('\n'))
         logger.debug(f"Ground truth data shape {str(ground_truth.shape)}")
 
     if sample_count <= 0:
