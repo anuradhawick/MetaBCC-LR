@@ -9,3 +9,4 @@ __pycache__/
 
 test_data
 test*
+.DS_Store
