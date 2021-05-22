@@ -107,7 +107,9 @@ def main():
 
     if not os.path.exists(output):
         os.makedirs(output)
+    if not os.path.exists(f"{output}/images"):
         os.makedirs(f"{output}/images")
+    if not os.path.exists(f"{output}/misc"):
         os.makedirs(f"{output}/misc")
 
     fileHandler = logging.FileHandler(f"{output}/metabcc-lr.log")
