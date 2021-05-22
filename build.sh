@@ -1,12 +1,33 @@
 #!/bin/bash
 
 [ -d mbcclr_utils/bin ] && rm -r mbcclr_utils/bin
-mkdir mbcclr_utils/bin
+mkdir mbcclr_utils/bin    
 
-echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
-g++ mbcclr_utils/search-15mers.cpp -fopenmp -Wall -o mbcclr_utils/bin/search15mers
-echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
-g++ mbcclr_utils/count-tri.cpp -Wall -fopenmp -o mbcclr_utils/bin/countTrimers
-echo "BUILDING READ ASSIGNER"
-g++ mbcclr_utils/assign_bins.cpp -fopenmp -o mbcclr_utils/bin/assign
-echo "BUILD FINISHED"
+case $1 in
+
+  osx | macos)
+    echo -n "OSX Build"
+    # OSX Build (modify the include path to suit you; you might need to run brew install libomp or brew install llvm)
+    echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
+    clang++ mbcclr_utils/search-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -I/usr/local/include -L/usr/local/lib
+    clang++ mbcclr_utils/count-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers -I/usr/local/include -L/usr/local/lib
+    echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
+    clang++ mbcclr_utils/count-kmers.cpp -Wall -lomp -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers -I/usr/local/include -L/usr/local/lib
+    echo "BUILDING READ ASSIGNER"
+    clang++ mbcclr_utils/assign_bins.cpp -lomp -fopenmp -lpthread -o mbcclr_utils/bin/assign -I/usr/local/include -L/usr/local/lib
+    echo "BUILD FINISHED"
+    ;;
+
+  *)
+    echo -n "Linux Build"
+    # Linux
+    echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
+    g++ mbcclr_utils/search-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers
+    g++ mbcclr_utils/count-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers
+    echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
+    g++ mbcclr_utils/count-kmers.cpp -Wall -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers
+    echo "BUILDING READ ASSIGNER"
+    g++ mbcclr_utils/assign_bins.cpp -fopenmp -lpthread -o mbcclr_utils/bin/assign
+    echo "BUILD FINISHED"
+    ;;
+esac
