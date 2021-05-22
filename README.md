@@ -125,6 +125,8 @@ optional arguments:
 }
 ```
 
-## Notes
+## Update
 
-A setup and a bundler with few performance updates will be released in due course.
+Program can be built and installed with `sh build` and `pip install .` 
+We recommend using `sh build` and using the program without installing. Thus making it easier to fetch future upadates and run.
+
