@@ -1,18 +1,15 @@
 import numpy as np
 from sklearn.manifold import TSNE
 from sklearn.cluster import DBSCAN
-from collections import defaultdict
-import sys
 from kneed import KneeLocator
 from sklearn.neighbors import NearestNeighbors
-import argparse
-import os
 from random import sample
 from sklearn.metrics.cluster import adjusted_rand_score
-import shutil
 import matplotlib
 import logging
 from tabulate import tabulate
+import umap
+from song.song import SONG
 
 matplotlib.use('Agg')
 
@@ -29,10 +26,11 @@ class Read:
         self.embededValue = None
 
 class Cluster:
-    def __init__(self, name):
+    def __init__(self, name, embedding):
         self.name = name
         self.reads = []
         self.sampledReads = None
+        self.embedding = embedding
 
     def sample(self):
         self.sampledReads = sample(self.reads, 1000)
@@ -69,17 +67,33 @@ class Cluster:
         return np.array(arr)
 
     def embedP15(self):
+        if self.embedding == 'song':
+            return SONG().fit_transform(self.getDataP15())
+        if self.embedding == 'umap':
+            return umap.UMAP().fit_transform(self.getDataP15())
         return TSNE(n_components=2,
                     init='pca').fit_transform(self.getDataP15())
 
     def embedP3(self):
+        if self.embedding == 'song':
+            return SONG().fit_transform(self.getDataP3())
+        if self.embedding == 'umap':
+            return umap.UMAP().fit_transform(self.getDataP3())
         return TSNE(n_components=2, init='pca').fit_transform(self.getDataP3())
 
     def embedP15sampled(self):
+        if self.embedding == 'song':
+            return SONG().fit_transform(self.getDataP15sampled())
+        if self.embedding == 'umap':
+            return umap.UMAP().fit_transform(self.getDataP15sampled())
         return TSNE(n_components=2,
                     init='pca').fit_transform(self.getDataP15sampled())
 
     def embedP3sampled(self):
+        if self.embedding == 'song':
+            return SONG().fit_transform(self.getDataP3sampled())
+        if self.embedding == 'umap':
+            return umap.UMAP().fit_transform(self.getDataP3sampled())
         return TSNE(n_components=2,
                     init='pca').fit_transform(self.getDataP3sampled())
 
@@ -121,14 +135,14 @@ def plot_cluster(X, Y, title, labels, output):
     fig.suptitle(title, fontsize=20)
 
     if len(labels) == len(X):
-        sns.scatterplot(X, Y, hue=labels).plot()
+        sns.scatterplot(x=X, y=Y, hue=labels).plot()
     else:
-        sns.scatterplot(X, Y).plot()
+        sns.scatterplot(x=X, y=Y).plot()
 
     plt.savefig(f"{output}/images/{title}.png", dpi=200, format="png")
     plt.close()
 
-def estimate_epsilon(X_embedded, sensitivity, plot=False):
+def estimate_epsilon(X_embedded, sensitivity, plot_name, output):
     neigh = NearestNeighbors(n_neighbors=2)
     nbrs = neigh.fit(X_embedded)
     distances, indices = nbrs.kneighbors(X_embedded)
@@ -144,10 +158,12 @@ def estimate_epsilon(X_embedded, sensitivity, plot=False):
                         direction='increasing',
                         interp_method='polynomial')
 
-    if plot:
+    if plot_name:
         plt.figure()
         plt.plot(distances)
         kneedle.plot_knee_normalized()
+        plt.savefig(f"{output}/images/{plot_name}.png", dpi=200, format="png")
+        plt.close()
 
     return sensitivity * distances[kneedle.knee]
 
@@ -199,7 +215,7 @@ def evaluate_clusters(clusters, species):
     logger.info(f"Recall       {cMax / tot:15.3f}")
     logger.info(f"ARI          {adjusted_rand_score(truth, labels):15.3f}")
 
-def cluster_reads(cluster, t, sensitivity, threads, output, ground_truth, sample=False, plot=False):
+def cluster_reads(cluster, t, sensitivity, threads, output, embedding, ground_truth, sample=False, plot=False):
     if len(cluster.reads) < 200:
         return {cluster.name + "-N": cluster}
     elif len(cluster.reads) > 2000 and sample:
@@ -214,7 +230,18 @@ def cluster_reads(cluster, t, sensitivity, threads, output, ground_truth, sample
         else:
             embeddedRoot = cluster.embedP15()
     
-    clustering = DBSCAN(eps=estimate_epsilon(embeddedRoot, sensitivity), n_jobs=threads).fit(embeddedRoot)
+    try:
+        eps = estimate_epsilon(embeddedRoot, sensitivity, "Kneedle for " + t  + " " + cluster.name, output)
+    except:
+        logger.error("Unable to locate an epsilon for clustering. Using 0.5")
+        eps = 0.5
+
+    # eps cannot be zero
+    if eps==0:
+        eps = 1
+
+    clustering = DBSCAN(eps=eps, n_jobs=threads).fit(embeddedRoot)
+    
     if t == "composition":
         labels = list(map(lambda x: f"{cluster.name}-c-{x+1}", list(clustering.labels_)))
     else:
@@ -225,7 +252,6 @@ def cluster_reads(cluster, t, sensitivity, threads, output, ground_truth, sample
                     embeddedRoot[:, 1],
                     "Separation by " + t  + " " + cluster.name,
                     labels, output)
-    label_set = list(set(labels))
 
     if ground_truth is not None:
         if sample and len(cluster.reads) > 2000:
@@ -250,7 +276,7 @@ def cluster_reads(cluster, t, sensitivity, threads, output, ground_truth, sample
         if "--1" in cname:
             continue
         if cname not in new_clusters:
-            new_clusters[cname] = Cluster(cname)
+            new_clusters[cname] = Cluster(cname, embedding)
         new_clusters[cname].addRead(read)
 
     # reassign all reads back
@@ -270,26 +296,26 @@ def cluster_reads(cluster, t, sensitivity, threads, output, ground_truth, sample
                     bestC = cn
             
             if bestC not in new_clustersAllReads:
-                new_clustersAllReads[bestC] = Cluster(bestC)
+                new_clustersAllReads[bestC] = Cluster(bestC, embedding)
 
             new_clustersAllReads[bestC].addRead(r)
         return new_clustersAllReads
     return new_clusters
 
-def cluster_composition(cluster, sensitivity, threads, output, ground_truth):
-    r1 = cluster_reads(cluster, "composition", sensitivity, threads, output, ground_truth, True, True)
+def cluster_composition(cluster, sensitivity, threads, output, embedding, ground_truth):
+    r1 = cluster_reads(cluster, "composition", sensitivity, threads, output, embedding, ground_truth, True, True)
     result = {}
 
-    if len(r1) > 1:
-        for cn, c2 in r1.items():
-            r2 = cluster_composition(c2, sensitivity, threads, output, ground_truth)
+    if len(r1) > 100:
+        for _, c2 in r1.items():
+            r2 = cluster_composition(c2, sensitivity, threads, output, embedding, ground_truth)
             result.update(r2)
     else:
         result.update(r1)
     
     return result
 
-def run_binner(output, ground_truth, threads, sensitivity):
+def run_binner(output, ground_truth, threads, sensitivity, embedding):
     sensitivity = 11 - sensitivity
     p3 = np.load(f"{output}/profiles/3mers_sampled.npy")
     p15 = np.load(f"{output}/profiles/15mers_sampled.npy")
@@ -298,7 +324,7 @@ def run_binner(output, ground_truth, threads, sensitivity):
     if ground_truth is not None:
         ground_truth = np.load(f"{output}/misc/filtered_truth_sampled.npy")
 
-    cluster_init = Cluster("Root")
+    cluster_init = Cluster("Root", embedding)
     all_species = []
 
     if ground_truth is not None:
@@ -313,7 +339,7 @@ def run_binner(output, ground_truth, threads, sensitivity):
     stats = open(f"{output_binning}/cluster-stats.txt", "w+")
 
     logger.debug("Clustering using coverage")
-    clx = cluster_reads(cluster_init, "coverage", sensitivity, threads, output, ground_truth, False, True)
+    clx = cluster_reads(cluster_init, "coverage", sensitivity, threads, output, embedding, ground_truth, False, True)
     logger.debug(f"Identified number of coverage clusters - {len(clx)}")
 
     # for each cov cluster cluster by composition
@@ -322,12 +348,12 @@ def run_binner(output, ground_truth, threads, sensitivity):
     bin_name = 1
     final_binning_result = {}
 
-    for cn, c in clx.items():
-        t = cluster_composition(c, sensitivity, threads, output, ground_truth)
+    for _, c in clx.items():
+        t = cluster_composition(c, sensitivity, threads, output, embedding, ground_truth)
             
         cly.update(t)
 
-        for cn2, cc in t.items():
+        for _, cc in t.items():
             stats.write(f"Bin-{bin_name}")
             final_binning_result[f"Bin-{bin_name}"] = cc
             stats.write("\n")
