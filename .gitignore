@@ -8,3 +8,4 @@ __pycache__/
 *.so
 
 test_data
+test*
