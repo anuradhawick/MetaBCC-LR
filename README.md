@@ -64,6 +64,27 @@ In order to run MetaBCC-LR you are required to provide the reads in FASTQ or FAS
 python mbcclr --resume -r test_data/data/reads.fasta -g test_data/data/ids.txt -o test_output -e umap -c 25000 -bs 10 -bc 10 -k 4
 ```
 
+### Separate reads into Bins
+
+You can use the script `reads2bins.py` to separate reads into bins. This is included in a separate script as you might want to play around with clustering sensitivity and sampling reads count to get a good final binning. You can look into images generated in `Output/images` directory to see if you have a good clustering of reads. Finally you can use the script `reads2bins.py` to separate reads.
+
+Inputs:
+* -r path to reads file used for binning
+* -b output/final.txt (the file containing bin of each read)
+* -o a destination directory to place final fasta files
+
+```
+usage: reads2bins.py [-h] --reads READS --bins BINS --output OUTPUT
+
+Separate reads in to bins.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --reads READS, -r READS
+  --bins BINS, -b BINS
+  --output OUTPUT, -o OUTPUT
+```
+
 ### Usage and Help
 ```
 cd MetaBCC-LR
