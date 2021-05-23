@@ -32,8 +32,8 @@ class Cluster:
         self.sampledReads = None
         self.embedding = embedding
 
-    def sample(self):
-        self.sampledReads = sample(self.reads, 1000)
+    def sample(self, count = 1000):
+        self.sampledReads = sample(self.reads, count)
 
     def addRead(self, read):
         self.reads.append(read)
@@ -339,42 +339,42 @@ def run_binner(output, ground_truth, threads, sensitivity, embedding):
     stats = open(f"{output_binning}/cluster-stats.txt", "w+")
 
     logger.debug("Clustering using coverage")
-    clx = cluster_reads(cluster_init, "coverage", sensitivity, threads, output, embedding, ground_truth, False, True)
-    logger.debug(f"Identified number of coverage clusters - {len(clx)}")
+    coverage_based_clusters = cluster_reads(cluster_init, "coverage", sensitivity, threads, output, embedding, ground_truth, False, True)
+    logger.debug(f"Identified number of coverage clusters - {len(coverage_based_clusters)}")
 
     # for each cov cluster cluster by composition
     logger.debug("Clustering using composition")
-    cly = {}
+    final_clusters = {}
     bin_name = 1
     final_binning_result = {}
 
-    for _, c in clx.items():
-        t = cluster_composition(c, sensitivity, threads, output, embedding, ground_truth)
+    for _, coverage_based_cluster in coverage_based_clusters.items():
+        composition_based_clusters = cluster_composition(coverage_based_cluster, sensitivity, threads, output, embedding, ground_truth)
             
-        cly.update(t)
+        final_clusters.update(composition_based_clusters)
 
-        for _, cc in t.items():
+        for _, composition_based_cluster in composition_based_clusters.items():
             stats.write(f"Bin-{bin_name}")
-            final_binning_result[f"Bin-{bin_name}"] = cc
+            final_binning_result[f"Bin-{bin_name}"] = composition_based_cluster
             stats.write("\n")
-            stats.write(" ".join(list(map(str, c.getMeanP15()))))
+            stats.write(" ".join(list(map(str, coverage_based_cluster.getMeanP15()))))
             stats.write("\n")
-            stats.write(" ".join(list(map(str, cc.getMeanP3()))))
+            stats.write(" ".join(list(map(str, composition_based_cluster.getMeanP3()))))
             stats.write("\n")
-            stats.write(" ".join(list(map(str, c.getStdP15()))))
+            stats.write(" ".join(list(map(str, coverage_based_cluster.getStdP15()))))
             stats.write("\n")
-            stats.write(" ".join(list(map(str, cc.getStdP3()))))
+            stats.write(" ".join(list(map(str, composition_based_cluster.getStdP3()))))
             stats.write("\n")
-            bin_name+=1
+            bin_name += 1
     
-    logger.debug(f"Identified number of coverage and composition clusters - {len(cly)}")
+    logger.debug(f"Identified number of coverage and composition clusters - {len(final_clusters)}")
 
     if sensitivity < 8:
         logger.debug(f"Discarding small clusters")
         # discarding poor bins
-        for k in list(cly.keys()):
-            if len(cly[k].reads) < 100:
-                del cly[k]
+        for k in list(final_clusters.keys()):
+            if len(final_clusters[k].reads) < 100:
+                del final_clusters[k]
 
     stats.close()
 

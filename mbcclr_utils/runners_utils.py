@@ -9,6 +9,7 @@ from mbcclr_utils import scan_dsk
 
 logger = logging.getLogger('MetaBCC-LR')
 
+# Depprecated
 def run_filter(reads_path, output, ids=None):
     extension = reads_path.split(".")[-1]
 
