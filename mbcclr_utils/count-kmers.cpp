@@ -138,7 +138,7 @@ void off_load_process(string &output, int &threads)
                 batch.push_back(seq);
                 reads_queue.pop();
 
-                if (batch.size() == 1000)
+                if (batch.size() == 10000)
                 {
                     break;
                 }
@@ -173,7 +173,7 @@ void io_thread(string &file_path)
     {
         {
             unique_lock<mutex> lock(mux);
-            condition.wait(lock, [] { return reads_queue.size() < 10000; });
+            condition.wait(lock, [] { return reads_queue.size() < 50000; });
             reads_queue.push(seq.data);
         }
         count++;

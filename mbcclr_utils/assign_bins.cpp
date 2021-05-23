@@ -6,6 +6,7 @@
 #include <string>
 #include <cmath>
 
+// TODO use valarrays for faster computations
 using namespace std;
 
 class Bin
@@ -182,7 +183,7 @@ void processLinesBatch(vector<vector<long double>> &batch3, vector<vector<long d
     string result = "";
 
     #pragma omp parallel for num_threads(threads) schedule(static, threads)
-    for (uint i = 0; i < batchAnswers.size(); i++)
+    for (size_t i = 0; i < batchAnswers.size(); i++)
     {
         
         batchAnswers[i] = getBestBin(bins, batch3[i], batch15[i]).getName();
@@ -191,7 +192,7 @@ void processLinesBatch(vector<vector<long double>> &batch3, vector<vector<long d
     ofstream output;
     output.open(outputPath, ios::out | ios::app);
 
-    for (uint i = 0; i < batchAnswers.size(); i++)
+    for (size_t i = 0; i < batchAnswers.size(); i++)
     {
         result += batchAnswers[i];
         result += "\n";
