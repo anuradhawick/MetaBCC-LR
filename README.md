@@ -164,7 +164,8 @@ optional arguments:
 Program can be built and installed with `sh build` and `pip install .` 
 We recommend using `sh build` and using the program without installing. Thus making it easier to fetch future upadates and run.
 
-## New in v-2.0
+## New in v-2.X
 
 * No need to have DSK, we have implemented a consice k-mer counting strategy using compare and swap (CAS).
 * Supports UMAP and SONG embeddings. Please note that UMAP and SONG are still being improved. Needs more work from our side. But usable!
+* Supports any input format **fasta, fastq** or **gzipped** formats of either. (Thanks for Klib by Attractive Chaos [blog](http://attractivechaos.github.io/klib/))

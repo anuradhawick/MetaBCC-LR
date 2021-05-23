@@ -9,12 +9,12 @@ case $1 in
     echo "OSX Build"
     # OSX Build (modify the include path to suit you; you might need to run brew install libomp or brew install llvm)
     echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
-    clang++ mbcclr_utils/search-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -I/usr/local/include -L/usr/local/lib
-    clang++ mbcclr_utils/count-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers -I/usr/local/include -L/usr/local/lib
+    clang++ mbcclr_utils/search-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -I/usr/local/include -L/usr/local/lib -lz
+    clang++ mbcclr_utils/count-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers -I/usr/local/include -L/usr/local/lib -lz
     echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
-    clang++ mbcclr_utils/count-kmers.cpp -Wall -lomp -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers -I/usr/local/include -L/usr/local/lib
+    clang++ mbcclr_utils/count-kmers.cpp -Wall -lomp -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers -I/usr/local/include -L/usr/local/lib -lz
     echo "BUILDING READ ASSIGNER"
-    clang++ mbcclr_utils/assign_bins.cpp -lomp -fopenmp -lpthread -o mbcclr_utils/bin/assign -I/usr/local/include -L/usr/local/lib
+    clang++ mbcclr_utils/assign_bins.cpp -lomp -fopenmp -lpthread -o mbcclr_utils/bin/assign -I/usr/local/include -L/usr/local/lib -lz
     echo "BUILD FINISHED"
     ;;
 
@@ -22,12 +22,12 @@ case $1 in
     echo "Linux Build"
     # Linux
     echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
-    g++ mbcclr_utils/search-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers
-    g++ mbcclr_utils/count-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers
+    g++ mbcclr_utils/search-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -lz
+    g++ mbcclr_utils/count-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers -lz
     echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
-    g++ mbcclr_utils/count-kmers.cpp -Wall -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers
+    g++ mbcclr_utils/count-kmers.cpp -Wall -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers -lz
     echo "BUILDING READ ASSIGNER"
-    g++ mbcclr_utils/assign_bins.cpp -fopenmp -lpthread -o mbcclr_utils/bin/assign
+    g++ mbcclr_utils/assign_bins.cpp -fopenmp -lpthread -o mbcclr_utils/bin/assign -lz
     echo "BUILD FINISHED"
     ;;
 esac
