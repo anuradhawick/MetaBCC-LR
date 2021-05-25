@@ -154,6 +154,8 @@ public:
     {
         if ((ret = kseq_read(ks)) >= 0)
         {
+            // using raw pointers can have unwated side effects
+            // better to copy than debug
             seq.data = string(ks->seq.s);
             seq.id = string(ks->name.s);
             return true;

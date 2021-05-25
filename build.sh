@@ -11,6 +11,7 @@ case $1 in
     echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
     clang++ mbcclr_utils/search-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -I/usr/local/include -L/usr/local/lib -lz -O3
     clang++ mbcclr_utils/count-15mers.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers -I/usr/local/include -L/usr/local/lib -lz -O3
+    clang++ mbcclr_utils/coverage-vecs.cpp -lomp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/coverage-vecs -I/usr/local/include -L/usr/local/lib -lz -O3
     echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
     clang++ mbcclr_utils/count-kmers.cpp -Wall -lomp -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers -I/usr/local/include -L/usr/local/lib -lz -O3
     echo "BUILDING READ ASSIGNER"
@@ -24,6 +25,7 @@ case $1 in
     echo "BUILDING THE MetaBCC-LR 15 MER COMPUTATIONS"
     g++ mbcclr_utils/search-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/search-15mers -lz -O3
     g++ mbcclr_utils/count-15mers.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/count-15mers -lz -O3
+    g++ mbcclr_utils/coverage-vecs.cpp -fopenmp -lpthread -Wall -o mbcclr_utils/bin/coverage-vecs -lz -O3
     echo "BUILDING THE MetaBCC-LR 3 MER COMPUTATIONS"
     g++ mbcclr_utils/count-kmers.cpp -Wall -fopenmp -lpthread -o mbcclr_utils/bin/count-kmers -lz -O3
     echo "BUILDING READ ASSIGNER"

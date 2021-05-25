@@ -52,7 +52,7 @@ def run_kmers(reads_path, output, k_size, threads):
     o = os.system(cmd)
     check_proc(o, "Counting Trimers")
 
-def run_15mers(reads_path, output, bin_size, bins, threads):
+def run_15mer_counts(reads_path, output, threads):
     if not os.path.isdir(f"{output}/profiles"):
         os.makedirs(f"{output}/profiles")
 
@@ -60,6 +60,10 @@ def run_15mers(reads_path, output, bin_size, bins, threads):
     logger.debug("CMD::" + cmd)
     o = os.system(cmd)
     check_proc(o, "Counting 15-mers")
+
+def run_15mer_vecs(reads_path, output, bin_size, bins, threads):
+    if not os.path.isdir(f"{output}/profiles"):
+        os.makedirs(f"{output}/profiles")
     
     cmd = f""""{os.path.dirname(__file__)}/bin/search-15mers" "{output}/profiles/15mers-counts" "{reads_path}" "{output}/profiles/15mers" {bin_size} {bins} {threads}"""
     logger.debug("CMD::" + cmd)

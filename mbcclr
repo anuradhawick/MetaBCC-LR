@@ -191,14 +191,21 @@ def main():
         runners_utils.checkpoint(data, checkpoints_path)
         logger.info("Counting K-mers complete")
 
-    if resume and ("15mers" not in data['completed'] or data['bin_size'] != bin_size or data['bin_count'] != bin_count) or not resume:
-        logger.info("Counting 15-mer profiles")
-        data['completed'].add('15mers')
+    if resume and ("15mer-counts" not in data['completed']) or not resume:
+        logger.info("Counting 15-mers")
+        data['completed'].add('15mer-counts')
+        runners_utils.run_15mer_counts(reads_path, output, threads)
+        runners_utils.checkpoint(data, checkpoints_path)
+        logger.info("Counting 15-mers complete")
+
+    if resume and ("15mer-vecs" not in data['completed'] or data['bin_size'] != bin_size or data['bin_count'] != bin_count) or not resume:
+        logger.info("Generating 15-mer profiles")
+        data['completed'].add('15mer-vecs')
         data['bin_size'] = bin_size
         data['bin_count'] = bin_count
-        runners_utils.run_15mers(reads_path, output, bin_size, bin_count, threads)
+        runners_utils.run_15mer_vecs(reads_path, output, bin_size, bin_count, threads)
         runners_utils.checkpoint(data, checkpoints_path)
-        logger.info("Counting 15-mer profiles complete")
+        logger.info("Generating 15-mer profiles complete")
 
     if resume and "sample" not in data['completed'] or not resume or resume and data['sample_count'] != sample_count:
         logger.info("Sampling Reads")
