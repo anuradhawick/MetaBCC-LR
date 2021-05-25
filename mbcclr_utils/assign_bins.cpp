@@ -5,14 +5,14 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <valarray>
 
-// TODO use valarrays for faster computations
 using namespace std;
 
 class Bin
 {
 private:
-    vector<long double> p3mean, p3std, p15mean, p15std;
+    valarray<long double> p3mean, p3std, p15mean, p15std;
     string name;
 public:
     Bin()
@@ -25,7 +25,7 @@ public:
         this->name = name;
     }
 
-    Bin(string name, vector<long double> p3mean, vector<long double> p15mean,  vector<long double> p3std,  vector<long double> p15std)
+    Bin(string name, valarray<long double> p3mean, valarray<long double> p15mean,  valarray<long double> p3std,  valarray<long double> p15std)
     {
         this->name = name;
         this->p3mean = p3mean;
@@ -39,64 +39,56 @@ public:
         return this->name;
     }
 
-    long double logpdf(long double mu, long double s, long double x)
-    {
-        long double p = -0.5L * powl((x - mu)/s, 2.0L) - log(powl(2.0L * 22.0L / 7.0L, 0.5L) * s);
+    // Implemented using val arrays - left as comment for reference
+    // long double logpdf(long double mu, long double s, long double x)
+    // {
+    //     long double p = -0.5L * powl((x - mu)/s, 2.0L) - log(powl(2.0L * 22.0L / 7.0L, 0.5L) * s);
         
-        return p;
-    }
+    //     return p;
+    // }
 
 
-    long double getProbability15(vector<long double> p15)
+    long double getProbability15(valarray<long double> p15)
     {
         size_t size = p15.size();
-        long double prob = 0;        
-
-        for (size_t i = 0; i < size; i++)
-        {
-            prob += logpdf(this->p15mean[i], this->p15std[i], p15[i]);
-        }
+        long double prob = (-0.5L * pow((p15 - this->p15mean)/this->p15std, 2.0L) - log(powl(2.0L * 22.0L / 7.0L, 0.5L) * this->p15std)).sum();
         
         return prob;
     }
 
-    long double getProbability3(vector<long double> p3)
+    long double getProbability3(valarray<long double> p3)
     {
         size_t size = p3.size();
-        long double prob = 0;        
-
-        for (size_t i = 0; i < size; i++)
-        {
-            prob += logpdf(this->p3mean[i], this->p3std[i], p3[i]);
-        }
+        long double prob = (-0.5L * pow((p3 - this->p3mean)/this->p3std, 2.0L) - log(powl(2.0L * 22.0L / 7.0L, 0.5L) * this->p3std)).sum();        
         
         return prob;
     }
 
-    void setP3mean(vector<long double> vals)
+    void setP3mean(valarray<long double> vals)
     {
         this->p3mean = vals;
     }
 
-    void setP3std(vector<long double> vals)
+    void setP3std(valarray<long double> vals)
     {
         this->p3std = vals;
     }
 
-    void setP15mean(vector<long double> vals)
+    void setP15mean(valarray<long double> vals)
     {
         this->p15mean = vals;
     }
 
-    void setP15std(vector<long double> vals)
+    void setP15std(valarray<long double> vals)
     {
         this->p15std = vals;
     }
 };
 
-vector<long double> lineToVec(string &line)
+valarray<long double> lineToVec(string &line)
 {
-    vector<long double> values;
+    vector<long double> _values;
+    // vector<long double> values;
     string tmp = "";
 
     for (int i = 0; i < (int)line.length(); i++)
@@ -108,15 +100,17 @@ vector<long double> lineToVec(string &line)
         else if (tmp.length() > 0)
         {
 
-            values.push_back(stold(tmp));
+            _values.push_back(stold(tmp));
             tmp = "";
         }
     }
     if (tmp.length() > 0)
     {
-        values.push_back(stold(tmp));
+        _values.push_back(stold(tmp));
         tmp = "";
     }
+
+    valarray<long double> values(_values.data(), _values.size());
 
     return values;
 }
@@ -151,7 +145,7 @@ vector<Bin> getBinsFromFile(string &statsFile)
     return bins;
 }
 
-Bin getBestBin(vector<Bin> &bins, vector<long double> &p3, vector<long double> &p15)
+Bin getBestBin(vector<Bin> &bins, valarray<long double> &p3, valarray<long double> &p15)
 {
     Bin bestbin;
     long double maxProb15 = -INFINITY, maxProb3 = -INFINITY;
@@ -177,7 +171,7 @@ Bin getBestBin(vector<Bin> &bins, vector<long double> &p3, vector<long double> &
     return bestbin;
 }
 
-void processLinesBatch(vector<vector<long double>> &batch3, vector<vector<long double>> &batch15, vector<Bin> &bins, string &outputPath, int threads)
+void processLinesBatch(vector<valarray<long double>> &batch3, vector<valarray<long double>> &batch15, vector<Bin> &bins, string &outputPath, int threads)
 {
     vector<string> batchAnswers(batch3.size());
     string result = "";
@@ -211,8 +205,8 @@ int main(int argc, char ** argv)
     string statsFile = argv[3];
     int threads = stoi(argv[4]);
     string outputPath = argv[5];
-    vector<vector<long double>> batch3;
-    vector<vector<long double>> batch15;
+    vector<valarray<long double>> batch3;
+    vector<valarray<long double>> batch15;
 
     vector<Bin> bins = getBinsFromFile(statsFile);
 
