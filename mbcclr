@@ -192,12 +192,18 @@ def main():
         runners_utils.run_kmers(reads_path, output, k_size, threads)
         data['completed'].add('kmers')
         data['k_size'] = k_size
+        if 'sample' in data['completed']:
+            data['completed'].remove('sample') # needs resampling
         runners_utils.checkpoint(data, checkpoints_path)
         logger.info("Counting K-mers complete")
 
     if resume and ("15mer-counts" not in data['completed']) or not resume:
         logger.info("Counting 15-mers")
         data['completed'].add('15mer-counts')
+        if 'sample' in data['completed']:
+            data['completed'].remove('sample') # needs resampling
+        if '15mer-vecs' in data['completed']:
+            data['completed'].remove('15mer-vecs') # needs needs next step
         runners_utils.run_15mer_counts(reads_path, output, threads)
         runners_utils.checkpoint(data, checkpoints_path)
         logger.info("Counting 15-mers complete")
@@ -207,6 +213,8 @@ def main():
         data['completed'].add('15mer-vecs')
         data['bin_size'] = bin_size
         data['bin_count'] = bin_count
+        if 'sample' in data['completed']:
+            data['completed'].remove('sample') # needs resampling
         runners_utils.run_15mer_vecs(reads_path, output, bin_size, bin_count, threads)
         runners_utils.checkpoint(data, checkpoints_path)
         logger.info("Generating 15-mer profiles complete")
