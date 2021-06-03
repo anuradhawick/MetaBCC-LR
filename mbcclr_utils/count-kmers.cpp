@@ -207,6 +207,8 @@ int main(int argc, char **argv)
     cout << "Profile Size " << kmer_count_len << endl;
     cout << "Total " << k_size << "-mers " << kmer_inds.size() << endl;
 
+    ofstream output(output_path, ios::out);
+
     thread iot(io_thread, ref(input_path));
     thread process(off_load_process, ref(output_path), ref(threads));
 

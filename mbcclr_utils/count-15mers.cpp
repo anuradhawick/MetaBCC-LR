@@ -106,6 +106,8 @@ int main(int argc, char **argv)
     cout << "OUTPUT FILE " << output_path << endl;
     cout << "THREADS " << threads << endl;
 
+    ofstream output(output_path, ios::out);
+
     thread iot(io_thread, ref(input_path));
     thread process(off_load_process, ref(output_path), ref(kmers), ref(threads));
 
