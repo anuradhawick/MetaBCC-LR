@@ -1,6 +1,7 @@
 import argparse
 import os
 from Bio import SeqIO
+import gzip
 
 parser = argparse.ArgumentParser(description='Separate reads in to bins.')
 
@@ -12,7 +13,11 @@ args = parser.parse_args()
 
 readsPath = args.reads
 readBinsPath = args.bins
-readsType = readsPath.split(".")[-1].lower()
+
+if 'gz' in readsPath.lower() or 'zip' in readsPath.lower():
+    readsType = readsPath.split(".")[-2].lower()
+else:
+    readsType = readsPath.split(".")[-1].lower()
 
 if readsType in ["fasta", "fna", "fa"]:
     readsType = "fasta"
@@ -26,14 +31,19 @@ outputDir = args.output + "/"
 outFiles = {}
 bins = open(readBinsPath)
 
-for record, bin_id in zip(SeqIO.parse(readsPath), open(readBinsPath)):
+if 'gz' in readsPath.lower() or 'zip' in readsPath.lower():
+    input_file = gzip.open(readsPath, "rt")
+else:
+    input_file = readsPath
+
+for record, bin_id in zip(SeqIO.parse(input_file, readsType), open(readBinsPath)):
     bin_id = bin_id.strip().split("\n")[-1]
     bpath = f"{outputDir}/{bin_id}.fasta"
 
     if bpath not in outFiles:
         outFiles[bpath] = open(bpath, "w+")
 
-    SeqIO.write(record, outFiles[bpath], "fasta")
+    outFiles[bpath].write(f">{str(record.id)}\n{str(record.seq)}\n")
 
 for k, f in outFiles.items():
     f.close()
