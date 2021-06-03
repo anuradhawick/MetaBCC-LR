@@ -31,7 +31,7 @@ void processLinesBatch(vector<string> &batch, vector<atomic<u_int32_t>> &all_kme
     batch_results.clear();
 }
 
-void off_load_process(string &output, vector<atomic<u_int32_t>> &all_kmers, int &threads)
+void off_load_process(vector<atomic<u_int32_t>> &all_kmers, int &threads)
 {
     string seq;
     vector<string> batch;
@@ -106,10 +106,8 @@ int main(int argc, char **argv)
     cout << "OUTPUT FILE " << output_path << endl;
     cout << "THREADS " << threads << endl;
 
-    ofstream output(output_path, ios::out);
-
     thread iot(io_thread, ref(input_path));
-    thread process(off_load_process, ref(output_path), ref(kmers), ref(threads));
+    thread process(off_load_process, ref(kmers), ref(threads));
 
     iot.join();
     process.join();
