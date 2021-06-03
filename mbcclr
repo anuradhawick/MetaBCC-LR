@@ -148,6 +148,9 @@ def main():
         data['output'] = output
         data['threads'] = threads
         data['truth'] = ground_truth
+
+        # composition related
+        data['k_size'] = k_size
         
         # coverage related
         data['bin_size'] = bin_size
@@ -184,10 +187,11 @@ def main():
     #     runners_utils.checkpoint(data, checkpoints_path)
     #     logger.info("Running DSK k-mer complete")
 
-    if resume and "kmers" not in data['completed'] or not resume:
+    if resume and ("kmers" not in data['completed'] or data['k_size'] != k_size) or not resume:
         logger.info("Counting K-mers")
         runners_utils.run_kmers(reads_path, output, k_size, threads)
         data['completed'].add('kmers')
+        data['k_size'] = k_size
         runners_utils.checkpoint(data, checkpoints_path)
         logger.info("Counting K-mers complete")
 
