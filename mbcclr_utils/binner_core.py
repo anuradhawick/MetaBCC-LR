@@ -357,7 +357,7 @@ def run_binner(output, ground_truth, threads, sensitivity, embedding):
         final_clusters.update(composition_based_clusters)
 
         for _, composition_based_cluster in composition_based_clusters.items():
-            if len(composition_based_cluster.reads) > 500 and sensitivity < 8:
+            if len(composition_based_cluster.reads) > 100:
                 stats.write(f"Bin-{bin_name}")
                 final_binning_result[f"Bin-{bin_name}"] = composition_based_cluster
                 stats.write("\n")
