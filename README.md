@@ -4,7 +4,7 @@
 
 # MetaBCC-LR: Metagenomics Binning by Coverage and Composition for Long Reads
 
-![GitHub](https://img.shields.io/github/license/anuradhawick/MetaBCC-LR)
+![GitHub](https://img.shields.io/github/license/metagentools/MetaBCC-LR)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/anuradhawick/MetaBCC-LR)
 
 ## Dependencies
