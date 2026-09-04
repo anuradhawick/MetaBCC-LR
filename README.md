@@ -41,11 +41,6 @@ cd MetaBCC-LR
 uv sync
 ```
 
-* Optional compatibility step (no native build required)
-```bash
-sh build.sh
-```
-
 Coverage histogram vectors are generated with `pykmertools` (`kmertools cov`) during runtime.
 
 * Run with uv
