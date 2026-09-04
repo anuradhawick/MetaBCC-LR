@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "MetaBCC-LR"
+version = "2.0.0"
+description = "MetaBCC-LR: Metagenomics Binning by Coverage and Composition for Long Reads"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Anuradha Wickramarachchi", email = "anuradhawick@gmail.com" }
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "biopython",
+  "tqdm",
+  "kneed",
+  "h5py",
+  "tabulate",
+  "seaborn",
+  "umap-learn",
+  "song-vis",
+  "pykmertools>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/anuradhawick/MetaBCC-LR"
+Repository = "https://github.com/anuradhawick/MetaBCC-LR"
+Issues = "https://github.com/anuradhawick/MetaBCC-LR/issues"
+
+[tool.setuptools]
+include-package-data = true
+script-files = ["mbcclr"]
+
+[tool.setuptools.packages.find]
+include = ["mbcclr_utils*"]
+
+[tool.setuptools.package-data]
+mbcclr_utils = ["*", "bin/*"]

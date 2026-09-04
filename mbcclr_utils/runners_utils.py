@@ -4,6 +4,7 @@ from Bio import SeqIO
 from tqdm import tqdm
 import logging
 import sys
+from pykmertools import OligoComputer
 
 from mbcclr_utils import scan_dsk
 
@@ -47,10 +48,33 @@ def run_kmers(reads_path, output, k_size, threads):
     if not os.path.isdir(f"{output}/profiles"):
         os.makedirs(f"{output}/profiles")
 
-    cmd = f""""{os.path.dirname(__file__)}/bin/count-kmers" "{reads_path}" "{output}/profiles/3mers" {k_size} {threads}"""
-    logger.debug("CMD::" + cmd)
-    o = os.system(cmd)
-    check_proc(o, "Counting Trimers")
+    if reads_path.split(".")[-1].lower() in ["fq", "fastq"]:
+        fmt = "fastq"
+    else:
+        fmt = "fasta"
+
+    output_path = f"{output}/profiles/3mers"
+    computer = OligoComputer(k_size)
+    fallback = [0.0 for _ in computer.get_header(mins=True)]
+
+    with open(reads_path, "r") as input_file, open(output_path, "w+") as output_file:
+        for record in SeqIO.parse(input_file, fmt):
+            seq = str(record.seq).upper()
+            if len(seq) < k_size:
+                profile = fallback
+            else:
+                try:
+                    profile = computer.vectorise_one(seq, norm=True, mins=True)
+                except ValueError:
+                    seq = "".join([s for s in seq if s in "ACGT"])
+                    if len(seq) < k_size:
+                        profile = fallback
+                    else:
+                        try:
+                            profile = computer.vectorise_one(seq, norm=True, mins=True)
+                        except ValueError:
+                            profile = fallback
+            output_file.write(" ".join([f"{v:.6f}" for v in profile]) + "\n")
 
 def run_15mer_counts(reads_path, output, threads):
     if not os.path.isdir(f"{output}/profiles"):

@@ -19,6 +19,7 @@ MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you
 * tabulate 0.8.7
 * umap-learn 0.5.1
 * song-vis (latest version from github)
+* pykmertools (for k-mer composition vectors)
 
 ### C++ requirements
 * GCC version 9.1.0
@@ -36,21 +37,29 @@ To download MetaBCC-LR, you have to clone the MetaBCC-LR repository to your mach
 git clone https://github.com/anuradhawick/MetaBCC-LR.git
 ```
 
-## Compiling the source code
-* Build the binaries
-```
+## Build and install
+MetaBCC-LR now uses a `pyproject.toml` build and can be managed with `uv`.
+
+* Sync/install Python dependencies with uv
+```bash
 cd MetaBCC-LR
-python setup.py build
+uv sync
 ```
-OR
-```
+
+* Build the C++ helper binaries
+```bash
 sh build.sh
-```    
-* To install the program 
 ```
-pip install .
+
+* Run with uv
+```bash
+uv run python mbcclr -h
 ```
-OR add the program path to your $PATH variable.
+
+* Build publishable source/wheel artifacts
+```bash
+uv build
+```
 
 ## Running the MetaBCC-LR
 
@@ -161,8 +170,8 @@ optional arguments:
 
 ## Update
 
-Program can be built and installed with `sh build` and `pip install .` 
-We recommend using `sh build` and using the program without installing. Thus making it easier to fetch future upadates and run.
+Program can be built and run with `uv sync` and `sh build.sh`.
+We recommend using `uv run ...` for command execution to keep environments reproducible.
 
 ## New in v-2.X
 

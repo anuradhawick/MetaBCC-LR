@@ -9,5 +9,12 @@ __pycache__/
 
 test_data
 test*
+!tests/
+!tests/**
 .DS_Store
 .vscode
+.venv
+dist
+build
+*.egg-info
+uv.lock
