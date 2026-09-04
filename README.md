@@ -46,10 +46,12 @@ cd MetaBCC-LR
 uv sync
 ```
 
-* Build the C++ helper binaries
+* Build the C++ helper binary (read assigner)
 ```bash
 sh build.sh
 ```
+
+Coverage histogram vectors are now generated with `pykmertools` (`kmertools cov`) during runtime.
 
 * Run with uv
 ```bash

@@ -4,6 +4,9 @@ from Bio import SeqIO
 from tqdm import tqdm
 import logging
 import sys
+import shutil
+import subprocess
+import tempfile
 from pykmertools import OligoComputer
 
 from mbcclr_utils import scan_dsk
@@ -79,20 +82,49 @@ def run_kmers(reads_path, output, k_size, threads):
 def run_15mer_counts(reads_path, output, threads):
     if not os.path.isdir(f"{output}/profiles"):
         os.makedirs(f"{output}/profiles")
-
-    cmd = f""""{os.path.dirname(__file__)}/bin/count-15mers" "{reads_path}" "{output}/profiles/15mers-counts" {threads}"""
-    logger.debug("CMD::" + cmd)
-    o = os.system(cmd)
-    check_proc(o, "Counting 15-mers")
+    logger.debug("15-mer counts are generated with kmertools cov in run_15mer_vecs")
 
 def run_15mer_vecs(reads_path, output, bin_size, bins, threads):
     if not os.path.isdir(f"{output}/profiles"):
         os.makedirs(f"{output}/profiles")
-    
-    cmd = f""""{os.path.dirname(__file__)}/bin/search-15mers" "{output}/profiles/15mers-counts" "{reads_path}" "{output}/profiles/15mers" {bin_size} {bins} {threads}"""
-    logger.debug("CMD::" + cmd)
-    o = os.system(cmd)
-    check_proc(o, "Counting 15-mer profiles")
+
+    kmertools = shutil.which("kmertools")
+    if kmertools is None:
+        local_cli = os.path.join(os.path.dirname(sys.executable), "kmertools")
+        if os.path.isfile(local_cli) and os.access(local_cli, os.X_OK):
+            kmertools = local_cli
+
+    if kmertools is None:
+        logger.error("Unable to locate kmertools CLI. Please install pykmertools in this environment.")
+        sys.exit(1)
+
+    profiles_path = f"{output}/profiles"
+    with tempfile.TemporaryDirectory(prefix="kmertools-cov-", dir=profiles_path) as tmpdir:
+        cmd = [
+            kmertools,
+            "cov",
+            "-i", reads_path,
+            "-o", tmpdir,
+            "-k", "15",
+            "-s", str(bin_size),
+            "-c", str(bins),
+            "-p", "spc",
+            "-t", str(threads),
+        ]
+        logger.debug("CMD::" + " ".join(cmd))
+        proc = subprocess.run(cmd)
+        if proc.returncode != 0:
+            check_proc(proc.returncode, "Counting 15-mer profiles")
+
+        counts_path = os.path.join(tmpdir, "kmers.counts")
+        vectors_path = os.path.join(tmpdir, "kmers.vectors")
+
+        if not os.path.isfile(counts_path) or not os.path.isfile(vectors_path):
+            logger.error("kmertools cov did not produce expected outputs: kmers.counts and kmers.vectors")
+            sys.exit(1)
+
+        shutil.move(counts_path, f"{profiles_path}/15mers-counts")
+        shutil.move(vectors_path, f"{profiles_path}/15mers")
 
 # depprecated
 def run_dsk(output, max_memory, threads):
