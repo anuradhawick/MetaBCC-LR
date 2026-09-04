@@ -62,6 +62,33 @@ class RunKmersTests(unittest.TestCase):
             self.assertEqual((output / "profiles" / "15mers-counts").read_text(encoding="utf-8"), "1\t2\n")
             self.assertEqual((output / "profiles" / "15mers").read_text(encoding="utf-8"), "0.1 0.9\n")
 
+    def test_run_assign_uses_numpy_assigner_and_writes_final_bins(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            output = tmp / "output"
+            (output / "profiles").mkdir(parents=True)
+            (output / "misc").mkdir(parents=True)
+
+            (output / "profiles" / "3mers").write_text("1 1\n0 0\n", encoding="utf-8")
+            (output / "profiles" / "15mers").write_text("0 0\n0 0\n", encoding="utf-8")
+            (output / "misc" / "cluster-stats.txt").write_text(
+                "Bin-1\n"
+                "0 0\n"
+                "0 0\n"
+                "1 1\n"
+                "1 1\n"
+                "Bin-2\n"
+                "0 0\n"
+                "1 1\n"
+                "1 1\n"
+                "1 1\n",
+                encoding="utf-8",
+            )
+
+            runners_utils.run_assign(str(output), 1)
+
+            self.assertEqual((output / "final.txt").read_text(encoding="utf-8"), "Bin-2\nBin-1\n")
+
 
 if __name__ == "__main__":
     unittest.main()

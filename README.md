@@ -8,7 +8,7 @@
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/anuradhawick/MetaBCC-LR)
 
 ## Dependencies
-MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you will need to install the following python and C++ modules.
+MetaBCC-LR runtime is Python-based (Python 3.9+). To run MetaBCC-LR, install the Python dependencies below.
 
 ### Python dependencies
 * numpy 1.16.4 
@@ -20,11 +20,6 @@ MetaBCC-LR is coded purely using C++ (v9) and Python 3.6. To run MetaBCC-LR, you
 * umap-learn 0.5.1
 * song-vis (latest version from github)
 * pykmertools (for k-mer composition vectors)
-
-### C++ requirements
-* GCC version 9.1.0
-* OpenMP 4.5 for multi processing
-* PThreads (any version should work)
 
 <!-- ### Third party programs
 * DSK: https://github.com/GATB/dsk
@@ -46,12 +41,12 @@ cd MetaBCC-LR
 uv sync
 ```
 
-* Build the C++ helper binary (read assigner)
+* Optional compatibility step (no native build required)
 ```bash
 sh build.sh
 ```
 
-Coverage histogram vectors are now generated with `pykmertools` (`kmertools cov`) during runtime.
+Coverage histogram vectors are generated with `pykmertools` (`kmertools cov`) during runtime.
 
 * Run with uv
 ```bash
@@ -172,7 +167,7 @@ optional arguments:
 
 ## Update
 
-Program can be built and run with `uv sync` and `sh build.sh`.
+Program can be run with `uv sync`.
 We recommend using `uv run ...` for command execution to keep environments reproducible.
 
 ## New in v-2.X

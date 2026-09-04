@@ -10,6 +10,7 @@ import tempfile
 from pykmertools import OligoComputer
 
 from mbcclr_utils import scan_dsk
+from mbcclr_utils.assign_utils import assign_reads_numpy
 
 logger = logging.getLogger('MetaBCC-LR')
 
@@ -43,9 +44,12 @@ def run_filter(reads_path, output, ids=None):
     output_fasta_file.close()
     
 def run_assign(output, threads):
-    cmd = f"""{os.path.dirname(__file__)}/bin/assign "{output}/profiles/3mers" "{output}/profiles/15mers" "{output}/misc/cluster-stats.txt" {threads} {output}/final.txt """
-    o = os.system(cmd)
-    check_proc(o, "Assigning reads")    
+    assign_reads_numpy(
+        f"{output}/profiles/3mers",
+        f"{output}/profiles/15mers",
+        f"{output}/misc/cluster-stats.txt",
+        f"{output}/final.txt",
+    )
 
 def run_kmers(reads_path, output, k_size, threads):
     if not os.path.isdir(f"{output}/profiles"):

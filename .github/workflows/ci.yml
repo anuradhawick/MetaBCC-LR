@@ -22,8 +22,5 @@ jobs:
       - name: Install project
         run: uv sync
 
-      - name: Build C++ helpers
-        run: sh build.sh
-
       - name: Run tests
         run: uv run python -m unittest discover -s tests -p "test_*.py"
